@@ -1,0 +1,47 @@
+[
+  {
+    "trial": 0,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-09T14:17:02.797034"
+  },
+  {
+    "trial": 1,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-09T14:17:32.322603"
+  },
+  {
+    "trial": 2,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-09T14:18:03.703820"
+  },
+  {
+    "trial": 3,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-09T14:18:33.496330"
+  },
+  {
+    "trial": 4,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "good",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-09T14:19:02.104673"
+  }
+]

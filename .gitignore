@@ -1,0 +1,33 @@
+# Nested repos with their own remotes
+TeleoperationUnity/
+robomail/
+
+# Large binary data (transfer via rsync/scp)
+datasets/
+checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Image caches (rebuilt automatically by train.py)
+*.npy
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Evaluation results (optional, uncomment to track)
+# eval_results/
