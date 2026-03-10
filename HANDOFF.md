@@ -1,5 +1,17 @@
 # Technical Handoff: Diffusion Policy for LEAP Hand + Franka Arm Grasping
 
+ls /dev/ttyUSB*
+run this in order to check for usb plugin for LEAP hand
+
+bash ~/frankapy/bash_scripts/start_control_pc.sh -u franka -i franka-Alienware-Area-51-R5 -g 0
+run this to start ros1
+
+source ~/franka/bin/activate
+source ~/frankapy/catkin_ws/devel/setup.bash
+for sourcing workspaces for interacting with franka arm
+
+
+
 ## 1. Project Overview
 
 **Goal:** Train a diffusion policy (imitation learning) to autonomously grasp rock-like climbing holds using a LEAP Hand mounted on a Franka Emika arm. The pipeline is: collect human teleoperation demonstrations → store in zarr → train diffusion policy → evaluate on real robot.
