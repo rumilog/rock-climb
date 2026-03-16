@@ -5,18 +5,23 @@ Evaluate a trained diffusion policy on the real robot.
 Loads a checkpoint, connects to the Franka arm + LEAP hand + cameras,
 runs the policy in a loop, and logs the results for human review.
 
+Supports both image-based (ResNet) and point-cloud-based (DP3) checkpoints.
+The checkpoint config's 'encoder_type' field determines which mode to use.
+
 Workflow per trial:
   1. Robot moves to a fixed reset pose (manual or automatic).
-  2. Policy observes for obs_horizon steps to fill the observation buffer.
-  3. Policy predicts a pred_horizon action chunk (joint position targets).
-  4. First action_horizon steps of the chunk are executed on the robot.
-  5. Steps 2-4 repeat until the episode ends (max steps or human stop).
-  6. Human rates the grasp (good / bad) via keyboard.
+  2. [PC mode] Robot arm moves out of camera view; clean point cloud captured.
+  3. Policy observes for obs_horizon steps to fill the observation buffer.
+  4. Policy predicts a pred_horizon action chunk (joint position targets).
+  5. First action_horizon steps of the chunk are executed on the robot.
+  6. Steps 3-5 repeat until the episode ends (max steps or human stop).
+  7. Human rates the grasp (good / bad) via keyboard.
 
 Usage:
     python3 evaluate.py --checkpoint ../checkpoints/best.pt
     python3 evaluate.py --checkpoint ../checkpoints/best.pt --hold 0 --trials 10
     python3 evaluate.py --checkpoint ../checkpoints/best.pt --dry-run  # no robot
+    python3 evaluate.py --checkpoint ../checkpoints/best.pt --grasp-type crimp
 """
 
 import os
@@ -48,8 +53,7 @@ for p in [str(FRANKA_SCRIPTS_DIR), str(LEAP_DIR), str(LEAP_API_DIR), str(SCRIPT_
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from episode_storage import resize_image
-from hold_detector import detect_hold_multi_camera
+from episode_storage import resize_image, GRASP_TYPE_IDS, GRASP_TYPE_NAMES, N_GRASP_TYPES
 
 import signal
 
@@ -70,25 +74,47 @@ RESET_HAND_ALLEGRO = np.array([0.078, 0.31, 0.41, 0.25, 0.14, 0.46, 0.50, 0.30,
                                0.43, 0.56, 0.55, 0.30, 0.17, -0.47, -0.10, 1.22],
                               dtype=np.float32)
 
+# Number of frames averaged for point cloud capture
+PC_CAPTURE_N_FRAMES = 5
+PC_N_POINTS = 1024
+
 
 def load_policy(ckpt_path, device):
-    from train import DiffusionPolicy
+    """Load policy from checkpoint. Returns (policy, cfg, norm_stats).
+
+    Handles both image-based (encoder_type='vision') and
+    point-cloud-based (encoder_type='point_cloud') checkpoints.
+    """
+    from train import DiffusionPolicy, PointCloudDiffusionPolicy
+
     ckpt = torch.load(str(ckpt_path), map_location=device, weights_only=False)
     cfg = ckpt["config"]
+    encoder_type = cfg.get("encoder_type", "vision")
 
-    down_dims = tuple(cfg.get("down_dims", [512, 1024, 2048]))
-    img_channels = cfg.get("img_channels", 3)
-
-    policy = DiffusionPolicy(
-        state_dim=cfg["state_dim"],
-        action_dim=cfg["action_dim"],
-        n_cams=cfg["n_cams"],
-        obs_horizon=cfg["obs_horizon"],
-        pred_horizon=cfg["pred_horizon"],
-        num_diffusion_steps=cfg["diffusion_steps"],
-        down_dims=down_dims,
-        img_channels=img_channels,
-    ).to(device)
+    if encoder_type == "point_cloud":
+        down_dims = tuple(cfg.get("down_dims", [256, 512, 1024]))
+        policy = PointCloudDiffusionPolicy(
+            state_dim=cfg["state_dim"],
+            action_dim=cfg["action_dim"],
+            obs_horizon=cfg["obs_horizon"],
+            pred_horizon=cfg["pred_horizon"],
+            num_diffusion_steps=cfg["diffusion_steps"],
+            down_dims=down_dims,
+            n_grasp_types=cfg.get("n_grasp_types", N_GRASP_TYPES),
+        ).to(device)
+    else:
+        down_dims = tuple(cfg.get("down_dims", [512, 1024, 2048]))
+        img_channels = cfg.get("img_channels", 3)
+        policy = DiffusionPolicy(
+            state_dim=cfg["state_dim"],
+            action_dim=cfg["action_dim"],
+            n_cams=cfg["n_cams"],
+            obs_horizon=cfg["obs_horizon"],
+            pred_horizon=cfg["pred_horizon"],
+            num_diffusion_steps=cfg["diffusion_steps"],
+            down_dims=down_dims,
+            img_channels=img_channels,
+        ).to(device)
 
     policy.load_state_dict(ckpt["model_state_dict"])
     policy.eval()
@@ -96,31 +122,50 @@ def load_policy(ckpt_path, device):
     norm_path = Path(ckpt_path).parent / "norm_stats.json"
     with open(norm_path) as f:
         norm = json.load(f)
-    norm_stats = {
-        "state_mean": np.array(norm["state_mean"], dtype=np.float32),
-        "state_std": np.array(norm["state_std"], dtype=np.float32),
-        "action_mean": np.array(norm["action_mean"], dtype=np.float32),
-        "action_std": np.array(norm["action_std"], dtype=np.float32),
-    }
+
+    norm_type = norm.get("normalization", "zscore")
+    if norm_type == "minmax":
+        norm_stats = {
+            "normalization": "minmax",
+            "state_min": np.array(norm["state_min"], dtype=np.float32),
+            "state_range": np.array(norm["state_range"], dtype=np.float32),
+            "action_min": np.array(norm["action_min"], dtype=np.float32),
+            "action_range": np.array(norm["action_range"], dtype=np.float32),
+        }
+    else:
+        norm_stats = {
+            "normalization": "zscore",
+            "state_mean": np.array(norm["state_mean"], dtype=np.float32),
+            "state_std": np.array(norm["state_std"], dtype=np.float32),
+            "action_mean": np.array(norm["action_mean"], dtype=np.float32),
+            "action_std": np.array(norm["action_std"], dtype=np.float32),
+        }
+
     return policy, cfg, norm_stats
 
 
-def build_state_vector(arm_joints, ee_pos, ee_quat, hand_joints, hold_pose=None):
-    parts = [
+def build_state_vector_23(arm_joints, hand_joints):
+    """arm(7) + hand(16) = 23-dim state (new pipeline)."""
+    return np.concatenate([
+        np.array(arm_joints, dtype=np.float32).ravel()[:7],
+        np.array(hand_joints, dtype=np.float32).ravel()[:16],
+    ])
+
+
+def build_state_vector_30(arm_joints, ee_pos, ee_quat, hand_joints):
+    """arm(7) + ee_pos(3) + ee_quat(4) + hand(16) = 30-dim state (legacy)."""
+    return np.concatenate([
         np.array(arm_joints, dtype=np.float32).ravel()[:7],
         np.array(ee_pos, dtype=np.float32).ravel()[:3],
         np.array(ee_quat, dtype=np.float32).ravel()[:4],
         np.array(hand_joints, dtype=np.float32).ravel()[:16],
-    ]
-    if hold_pose is not None:
-        parts.append(np.array(hold_pose, dtype=np.float32).ravel()[:6])
-    return np.concatenate(parts)
+    ])
 
 
 class PolicyEvaluator:
     def __init__(self, ckpt_path, hold_id=0, n_trials=5, max_steps=200,
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
-                 num_inference_steps=100):
+                 num_inference_steps=10, grasp_type=None):
         self.hold_id = hold_id
         self.n_trials = n_trials
         self.max_steps = max_steps
@@ -133,44 +178,95 @@ class PolicyEvaluator:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Loading policy from {ckpt_path}...")
         self.policy, self.cfg, self.norm = load_policy(ckpt_path, self.device)
+
+        self.encoder_type = self.cfg.get("encoder_type", "vision")
+        self.use_pc = (self.encoder_type == "point_cloud")
         self.img_size = self.cfg.get("img_size", 224)
         self.img_channels = self.cfg.get("img_channels", 3)
         self.use_rgbd = (self.img_channels == 4)
-        print(f"  state_dim={self.cfg['state_dim']}, action_dim={self.cfg['action_dim']}, "
-              f"obs_horizon={self.cfg['obs_horizon']}, pred_horizon={self.cfg['pred_horizon']}, "
-              f"img_size={self.img_size}, img_channels={self.img_channels}")
+        self.state_dim = self.cfg["state_dim"]
 
-        # Warmup CUDA kernels with a dummy forward pass
+        print(f"  encoder_type={self.encoder_type}, "
+              f"state_dim={self.state_dim}, action_dim={self.cfg['action_dim']}, "
+              f"obs_horizon={self.cfg['obs_horizon']}, "
+              f"pred_horizon={self.cfg['pred_horizon']}")
+
+        # Grasp type for PC mode
+        if self.use_pc:
+            if grasp_type is None:
+                grasp_type = self._prompt_grasp_type()
+            self.grasp_type = grasp_type
+            self.grasp_type_id = GRASP_TYPE_IDS.get(grasp_type, 0)
+            print(f"  grasp_type={grasp_type} (id={self.grasp_type_id})")
+        else:
+            self.grasp_type = grasp_type
+            self.grasp_type_id = 0
+
+        # Warm up GPU
         print("  Warming up GPU (one-time)...", end=" ", flush=True)
-        n_cams = len(self.cfg["cam_names"])
-        dummy_s = torch.zeros(1, self.cfg["obs_horizon"], self.cfg["state_dim"],
-                              device=self.device)
-        dummy_i = torch.zeros(1, self.cfg["obs_horizon"], n_cams,
-                              self.img_channels, self.img_size, self.img_size,
-                              device=self.device)
-        with torch.no_grad():
-            self.policy.predict_action(dummy_s, dummy_i, num_inference_steps=self.num_inference_steps)
+        self._warmup_gpu()
         print("done")
 
-        self.cam_names = self.cfg["cam_names"]
+        self.cam_names = self.cfg.get("cam_names", [f"cam{n}" for n in CAMERA_NUMBERS])
         self.obs_horizon = self.cfg["obs_horizon"]
         self.pred_horizon = self.cfg["pred_horizon"]
 
         self.fa = None
         self.leap_dxl = None
         self.cameras = None
-        self.hold_pose = np.zeros(6, dtype=np.float32)
         self._live_active = False
         self._ros_pub = None
         self._ros_id = 0
         self._live_init_time = 0
 
+        # Cached camera calibration for point cloud
+        self._cam_intrinsics = None
+        self._cam_extrinsics = None
+
+    def _prompt_grasp_type(self):
+        print("\nPoint cloud mode requires grasp type. Select:")
+        for gid, gname in GRASP_TYPE_NAMES.items():
+            print(f"  {gid}: {gname}")
+        while True:
+            try:
+                choice = input("Enter grasp type ID or name: ").strip().lower()
+                if choice.isdigit():
+                    gid = int(choice)
+                    if gid in GRASP_TYPE_NAMES:
+                        return GRASP_TYPE_NAMES[gid]
+                elif choice in GRASP_TYPE_IDS:
+                    return choice
+                print(f"  Invalid. Enter 0-{N_GRASP_TYPES-1} or a name.")
+            except (EOFError, KeyboardInterrupt):
+                print("Defaulting to 'crimp'")
+                return "crimp"
+
+    def _warmup_gpu(self):
+        """One dummy forward pass to warm up CUDA kernels."""
+        with torch.no_grad():
+            if self.use_pc:
+                dummy_s = torch.zeros(1, self.cfg["obs_horizon"], self.state_dim,
+                                      device=self.device)
+                dummy_pc = torch.zeros(1, PC_N_POINTS, 3, device=self.device)
+                dummy_gt = torch.zeros(1, dtype=torch.long, device=self.device)
+                self.policy.predict_action(
+                    dummy_s, dummy_pc, dummy_gt,
+                    num_inference_steps=self.num_inference_steps)
+            else:
+                n_cams = len(self.cam_names)
+                dummy_s = torch.zeros(1, self.cfg["obs_horizon"], self.state_dim,
+                                      device=self.device)
+                dummy_i = torch.zeros(1, self.cfg["obs_horizon"], n_cams,
+                                      self.img_channels, self.img_size, self.img_size,
+                                      device=self.device)
+                self.policy.predict_action(
+                    dummy_s, dummy_i,
+                    num_inference_steps=self.num_inference_steps)
+
     def setup(self):
         self._setup_franka()
         self._setup_leap()
         self._setup_cameras()
-        if self.cfg.get("state_dim", 30) > 30:
-            self.scan_hold_pose()
         print(f"\nReady to evaluate on hold {self.hold_id} "
               f"({HOLD_NAMES.get(self.hold_id, '?')}), {self.n_trials} trials\n")
 
@@ -180,7 +276,6 @@ class PolicyEvaluator:
             return
         from frankapy import FrankaArm
         self.fa = FrankaArm(with_gripper=False)
-        # Clear any lingering skill from a previous crashed run
         try:
             self.fa.stop_skill()
         except Exception:
@@ -208,9 +303,9 @@ class PolicyEvaluator:
             self.leap_dxl.connect()
             self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 5, 11, 1)
             self.leap_dxl.set_torque_enabled(self._leap_motors, True)
-            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 800, 84, 2)  # kP
-            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 200, 80, 2)  # kD
-            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 600, 102, 2)  # curr_lim
+            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 800, 84, 2)
+            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 200, 80, 2)
+            self.leap_dxl.sync_write(self._leap_motors, np.ones(16) * 600, 102, 2)
             print(f"[LEAP] connected on {port}")
         except Exception as e:
             print(f"[LEAP] WARNING: connection failed: {e}")
@@ -227,29 +322,55 @@ class PolicyEvaluator:
         self.cameras.get_next_frames()
         print(f"[Cameras] {cam_nums} streaming")
 
-    def scan_hold_pose(self, cam_index=0, n_samples=5):
-        """Detect hold 3D pose using depth from a designated camera."""
-        print(f"\nScanning hold pose from camera {self._cam_nums[cam_index]}...")
-        poses = []
-        for _ in range(n_samples):
-            raw = self.cameras.get_next_frames()
-            pose, n_pts = detect_hold_multi_camera(raw, cam_index=cam_index)
-            if n_pts > 50:
-                poses.append(pose)
-            time.sleep(0.1)
+        # Cache camera calibration for point cloud mode
+        if self.use_pc:
+            try:
+                from point_cloud_utils import (
+                    get_cam_intrinsics_from_realsense,
+                    get_cam_extrinsics_from_realsense,
+                )
+                self._cam_intrinsics = [
+                    get_cam_intrinsics_from_realsense(c) for c in self.cameras.cameras]
+                self._cam_extrinsics = [
+                    get_cam_extrinsics_from_realsense(c) for c in self.cameras.cameras]
+                print(f"[Cameras] Calibration loaded for {len(self._cam_intrinsics)} cameras")
+            except Exception as e:
+                print(f"[Cameras] WARNING: calibration failed ({e})")
 
-        if not poses:
-            print("  WARNING: No hold detected — using zeros.")
-            self.hold_pose = np.zeros(6, dtype=np.float32)
-        else:
-            self.hold_pose = np.mean(poses, axis=0).astype(np.float32)
-            c, n = self.hold_pose[:3], self.hold_pose[3:]
-            print(f"  Hold detected ({len(poses)}/{n_samples} frames):")
-            print(f"    Centroid: [{c[0]:.3f}, {c[1]:.3f}, {c[2]:.3f}] m")
-            print(f"    Normal:   [{n[0]:.3f}, {n[1]:.3f}, {n[2]:.3f}]")
-        return self.hold_pose
+    def _capture_clean_point_cloud(self):
+        """Capture fused point cloud from all cameras. Arm must be out of view.
+
+        Returns:
+            pc: (PC_N_POINTS, 3) float32 in world frame
+        """
+        from point_cloud_utils import fuse_multi_camera_points
+
+        if self._cam_intrinsics is None or self._cam_extrinsics is None:
+            print("  WARNING: No camera calibration. Returning zero PC.")
+            return np.zeros((PC_N_POINTS, 3), dtype=np.float32)
+
+        pcs = []
+        for frame_i in range(PC_CAPTURE_N_FRAMES):
+            raw_frames = self.cameras.get_next_frames()
+            depth_images = []
+            for i in range(len(self._cam_nums)):
+                depth = raw_frames[i][1]
+                if depth is None or depth.size == 0:
+                    depth = np.zeros((CAMERA_RAW_H, CAMERA_RAW_W), dtype=np.uint16)
+                depth_images.append(depth)
+            pc = fuse_multi_camera_points(
+                depth_images=depth_images,
+                cam_intrinsics=self._cam_intrinsics,
+                cam_extrinsics=self._cam_extrinsics,
+                n_points=PC_N_POINTS,
+                outlier_removal=(frame_i == 0),
+            )
+            pcs.append(pc)
+            time.sleep(0.05)
+        return pcs[-1]  # Return the last clean capture
 
     def _read_state(self):
+        """Read robot state. Returns state vector matching the policy's state_dim."""
         if self.fa is not None:
             joints = np.array(self.fa.get_joints(), dtype=np.float32)
             pose = self.fa.get_pose()
@@ -269,8 +390,11 @@ class PolicyEvaluator:
         else:
             hand = np.zeros(16, dtype=np.float32)
 
-        hp = self.hold_pose if self.cfg.get("state_dim", 30) > 30 else None
-        return build_state_vector(joints, ee_pos, ee_quat, hand, hold_pose=hp)
+        if self.state_dim == 23:
+            return build_state_vector_23(joints, hand)
+        else:
+            # Legacy 30-dim
+            return build_state_vector_30(joints, ee_pos, ee_quat, hand)
 
     def _read_images(self):
         raw = self.cameras.get_frames()
@@ -289,13 +413,20 @@ class PolicyEvaluator:
         return imgs
 
     def _normalize_state(self, s):
-        return (s - self.norm["state_mean"]) / self.norm["state_std"]
+        norm = self.norm
+        if norm["normalization"] == "minmax":
+            return 2.0 * (s - norm["state_min"]) / norm["state_range"] - 1.0
+        else:
+            return (s - norm["state_mean"]) / norm["state_std"]
 
     def _unnormalize_action(self, a):
-        return a * self.norm["action_std"] + self.norm["action_mean"]
+        norm = self.norm
+        if norm["normalization"] == "minmax":
+            return (a + 1.0) / 2.0 * norm["action_range"] + norm["action_min"]
+        else:
+            return a * norm["action_std"] + norm["action_mean"]
 
     def _start_live_control(self):
-        """Start a long-running dynamic joint skill for streaming targets."""
         if self.fa is None or self._live_active:
             return
         import rospy
@@ -316,7 +447,6 @@ class PolicyEvaluator:
         print("[Arm] Live joint control started")
 
     def _stop_live_control(self):
-        """Stop the live dynamic skill."""
         if not self._live_active:
             return
         try:
@@ -324,11 +454,10 @@ class PolicyEvaluator:
         except Exception:
             pass
         self._live_active = False
-        time.sleep(1.5)  # frankapy action server needs time to fully reset
+        time.sleep(1.5)
         print("[Arm] Live joint control stopped")
 
     def _send_joint_target(self, joints):
-        """Send a joint position update to the running dynamic skill."""
         import rospy
         from frankapy import SensorDataMessageType
         from frankapy.proto_utils import sensor_proto2ros_msg, make_sensor_group_msg
@@ -346,11 +475,17 @@ class PolicyEvaluator:
         self._ros_id += 1
 
     def _execute_action(self, action_vec):
-        """Send a 36-dim action to the robot (arm joints + hand joints).
-        Layout: arm(7) + ee_pos(3) + ee_quat(4) + hand(16) + hold_pose(6)
-        Only arm joints [0:7] and hand joints [14:30] are actuated."""
-        arm_target = np.array(action_vec[:7], dtype=np.float64)
-        hand_target_allegro = action_vec[14:30]
+        """Send arm + hand joint targets to robot.
+
+        Supports 23-dim (new: arm7 + hand16) and legacy 30/36-dim layouts.
+        """
+        if self.state_dim == 23:
+            arm_target = np.array(action_vec[:7], dtype=np.float64)
+            hand_target_allegro = action_vec[7:23]
+        else:
+            # Legacy 30-dim: arm(7) + ee_pos(3) + ee_quat(4) + hand(16)
+            arm_target = np.array(action_vec[:7], dtype=np.float64)
+            hand_target_allegro = action_vec[14:30]
 
         if self.fa is not None and self._live_active:
             cur_joints = np.array(self.fa.get_joints(), dtype=np.float64)
@@ -367,7 +502,6 @@ class PolicyEvaluator:
                 pass
 
     def _reset_robot(self, timeout=15):
-        """Move arm and hand to a safe reset pose."""
         print("Resetting robot to home pose...")
         just_stopped = False
         if self._live_active:
@@ -375,15 +509,14 @@ class PolicyEvaluator:
             just_stopped = True
         if self.fa is not None:
             if not just_stopped:
-                # Only stop skill if _stop_live_control didn't just do it
                 try:
                     self.fa.stop_skill()
                 except Exception:
                     pass
                 time.sleep(1.0)
-            # Run goto_joints in a thread with timeout to avoid hanging forever
             done = threading.Event()
             error = [None]
+
             def _go():
                 try:
                     self.fa.goto_joints(RESET_ARM_JOINTS.tolist(), duration=5.0,
@@ -392,6 +525,7 @@ class PolicyEvaluator:
                     error[0] = e
                 finally:
                     done.set()
+
             t = threading.Thread(target=_go, daemon=True)
             t.start()
             if not done.wait(timeout):
@@ -420,26 +554,40 @@ class PolicyEvaluator:
 
         cv2.namedWindow("Eval", cv2.WINDOW_NORMAL)
 
-        print("Robot at reset pose. Press SPACE to start policy rollout...")
-        while True:
-            imgs = self._read_images()
-            panels = []
-            for cam in self.cam_names:
-                p = cv2.resize(imgs[cam], (224, 224))
-                panels.append(p)
-            if len(panels) <= 2:
-                canvas = np.hstack(panels)
-            else:
-                ncols = 2
-                while len(panels) % ncols != 0:
-                    panels.append(np.zeros_like(panels[0]))
-                rows = [np.hstack(panels[i:i + ncols]) for i in range(0, len(panels), ncols)]
-                canvas = np.vstack(rows)
-            cv2.putText(canvas, f"Trial {trial_idx+1}/{self.n_trials} - SPACE to start",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            cv2.imshow("Eval", canvas)
-            if (cv2.waitKey(50) & 0xFF) == ord(" "):
-                break
+        # If point cloud mode: capture clean scene PC before starting
+        scene_pc = None
+        if self.use_pc:
+            print("Point cloud mode: move arm OUT of all camera views, "
+                  "then press SPACE to capture clean scene PC...")
+            while True:
+                imgs = self._read_images()
+                canvas = self._make_canvas(imgs,
+                    f"Trial {trial_idx+1} - MOVE ARM OUT then SPACE for PC")
+                cv2.imshow("Eval", canvas)
+                if (cv2.waitKey(50) & 0xFF) == ord(" "):
+                    break
+            print("  Capturing point cloud...", end=" ", flush=True)
+            scene_pc = self._capture_clean_point_cloud()
+            n_valid = np.sum(np.any(scene_pc != 0, axis=-1))
+            print(f"done ({n_valid}/{PC_N_POINTS} valid pts)")
+
+            print("Return arm to approach pose, then press SPACE to start policy...")
+            while True:
+                imgs = self._read_images()
+                canvas = self._make_canvas(imgs,
+                    f"Trial {trial_idx+1} - RETURN ARM then SPACE to start")
+                cv2.imshow("Eval", canvas)
+                if (cv2.waitKey(50) & 0xFF) == ord(" "):
+                    break
+        else:
+            print("Robot at reset pose. Press SPACE to start policy rollout...")
+            while True:
+                imgs = self._read_images()
+                canvas = self._make_canvas(imgs,
+                    f"Trial {trial_idx+1}/{self.n_trials} - SPACE to start")
+                cv2.imshow("Eval", canvas)
+                if (cv2.waitKey(50) & 0xFF) == ord(" "):
+                    break
 
         # Fill observation buffer
         state_buf = deque(maxlen=self.obs_horizon)
@@ -458,43 +606,40 @@ class PolicyEvaluator:
         step = 0
         aborted = False
         print(f"Running policy (max {self.max_steps} steps)...")
+
+        # Prepare grasp type tensor for PC mode
+        grasp_type_t = None
+        if self.use_pc:
+            grasp_type_t = torch.tensor(
+                [self.grasp_type_id], dtype=torch.long, device=self.device)
+
         while step < self.max_steps:
             t0 = time.time()
 
             # Build observation tensors
             obs_states = np.stack([self._normalize_state(s) for s in state_buf])
-            obs_imgs_list = []
-            for img_dict in img_buf:
-                cams = []
-                for cam in self.cam_names:
-                    rgb = img_dict[cam].astype(np.float32) / 255.0
-                    rgb = np.transpose(rgb, (2, 0, 1))  # (3, H, W)
-                    for ch_i in range(3):
-                        rgb[ch_i] = (rgb[ch_i] - IMAGENET_MEAN[ch_i]) / IMAGENET_STD[ch_i]
-                    if self.use_rgbd:
-                        d = img_dict.get(cam + "_depth",
-                                         np.zeros((self.img_size, self.img_size), dtype=np.uint16))
-                        d_norm = np.clip(d.astype(np.float32) * 0.001 / 2.0, 0, 1)[np.newaxis]
-                        cams.append(np.concatenate([rgb, d_norm], axis=0))  # (4, H, W)
-                    else:
-                        cams.append(rgb)
-                obs_imgs_list.append(np.stack(cams))
-            obs_imgs = np.stack(obs_imgs_list)
-
             obs_s_t = torch.from_numpy(obs_states).unsqueeze(0).to(self.device)
-            obs_i_t = torch.from_numpy(obs_imgs).unsqueeze(0).to(self.device)
 
             # Predict action chunk
             t_inf = time.time()
             with torch.no_grad():
-                action_chunk = self.policy.predict_action(obs_s_t, obs_i_t, num_inference_steps=self.num_inference_steps)
-            action_chunk = action_chunk.squeeze(0).cpu().numpy()  # (Tp, D)
+                if self.use_pc:
+                    pc_t = torch.from_numpy(scene_pc).unsqueeze(0).to(self.device)
+                    action_chunk = self.policy.predict_action(
+                        obs_s_t, pc_t, grasp_type_t,
+                        num_inference_steps=self.num_inference_steps)
+                else:
+                    obs_imgs_np = self._build_image_tensor(img_buf)
+                    obs_i_t = torch.from_numpy(obs_imgs_np).unsqueeze(0).to(self.device)
+                    action_chunk = self.policy.predict_action(
+                        obs_s_t, obs_i_t,
+                        num_inference_steps=self.num_inference_steps)
+
+            action_chunk = action_chunk.squeeze(0).cpu().numpy()
             action_chunk = self._unnormalize_action(action_chunk)
             inf_time = time.time() - t_inf
             if step == 0:
-                print(f"  First inference took {inf_time:.1f}s")
-            elif step <= self.action_horizon:
-                print(f"  Inference: {inf_time:.2f}s")
+                print(f"  First inference: {inf_time:.2f}s")
 
             # Execute action_horizon steps from the chunk
             n_exec = min(self.action_horizon, self.max_steps - step)
@@ -518,20 +663,10 @@ class PolicyEvaluator:
                 if sleep_t > 0:
                     time.sleep(sleep_t)
 
-                # Show live feed
-                panels = [cv2.resize(new_imgs[c], (224, 224)) for c in self.cam_names]
-                if len(panels) <= 2:
-                    canvas = np.hstack(panels)
-                else:
-                    ncols = 2
-                    while len(panels) % ncols != 0:
-                        panels.append(np.zeros_like(panels[0]))
-                    rows = [np.hstack(panels[j:j + ncols]) for j in range(0, len(panels), ncols)]
-                    canvas = np.vstack(rows)
-
                 status = f"Step {step}/{self.max_steps}"
-                cv2.putText(canvas, status, (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                if self.use_pc:
+                    status += f"  [{self.grasp_type}]"
+                canvas = self._make_canvas(new_imgs, status, color=(0, 0, 255))
                 cv2.imshow("Eval", canvas)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord("q") or key == ord(" "):
@@ -565,9 +700,54 @@ class PolicyEvaluator:
             "num_steps": len(states_log),
             "aborted": aborted,
             "timestamp": datetime.now().isoformat(),
+            "encoder_type": self.encoder_type,
         }
+        if self.use_pc:
+            result["grasp_type"] = self.grasp_type
+            result["grasp_type_id"] = self.grasp_type_id
         print(f"  Result: {rating} ({len(states_log)} steps)")
         return result
+
+    def _build_image_tensor(self, img_buf):
+        """Convert img_buf (deque of dicts) → (T_o, n_cams, C, H, W) float32."""
+        obs_imgs_list = []
+        for img_dict in img_buf:
+            cams = []
+            for cam in self.cam_names:
+                rgb = img_dict[cam].astype(np.float32) / 255.0
+                rgb = np.transpose(rgb, (2, 0, 1))
+                for ch_i in range(3):
+                    rgb[ch_i] = (rgb[ch_i] - IMAGENET_MEAN[ch_i]) / IMAGENET_STD[ch_i]
+                if self.use_rgbd:
+                    d = img_dict.get(cam + "_depth",
+                                     np.zeros((self.img_size, self.img_size), dtype=np.uint16))
+                    d_norm = np.clip(d.astype(np.float32) * 0.001 / 2.0, 0, 1)[np.newaxis]
+                    cams.append(np.concatenate([rgb, d_norm], axis=0))
+                else:
+                    cams.append(rgb)
+            obs_imgs_list.append(np.stack(cams))
+        return np.stack(obs_imgs_list).astype(np.float32)  # (T_o, n_cams, C, H, W)
+
+    def _make_canvas(self, imgs, text, color=(0, 255, 0)):
+        """Build a preview canvas from image dict."""
+        panels = []
+        for cam in self.cam_names:
+            if cam in imgs:
+                p = cv2.resize(imgs[cam], (224, 224))
+                panels.append(p)
+        if not panels:
+            canvas = np.zeros((224, 224, 3), dtype=np.uint8)
+        elif len(panels) <= 2:
+            canvas = np.hstack(panels)
+        else:
+            ncols = 2
+            while len(panels) % ncols != 0:
+                panels.append(np.zeros_like(panels[0]))
+            rows = [np.hstack(panels[i:i + ncols]) for i in range(0, len(panels), ncols)]
+            canvas = np.vstack(rows)
+        cv2.putText(canvas, text, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        return canvas
 
     def run(self):
         results = []
@@ -578,13 +758,11 @@ class PolicyEvaluator:
                 print("Evaluation aborted by user.")
                 break
 
-        # Save results
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = self.results_dir / f"eval_{ts}_hold{self.hold_id}.json"
         with open(out_path, "w") as f:
             json.dump(results, f, indent=2)
 
-        # Summary
         print(f"\n{'=' * 50}")
         print(f"Evaluation complete — {len(results)} trials")
         n_good = sum(1 for r in results if r["rating"] == "good")
@@ -608,8 +786,15 @@ def main():
     parser.add_argument("--dry-run", action="store_true",
                         help="No robot — cameras only")
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR))
-    parser.add_argument("--inference-steps", type=int, default=100,
-                        help="Inference steps (default 100 = full DDPM, use fewer for DDIM)")
+    parser.add_argument("--inference-steps", type=int, default=10,
+                        help="DDIM inference steps at evaluation time (default 10). "
+                             "10 DDIM steps ≈ 100 DDPM quality but ~10x faster — "
+                             "required to stay within 10 Hz control loop. "
+                             "Use 100 only for offline quality comparison.")
+    parser.add_argument("--grasp-type", type=str, default=None,
+                        choices=list(GRASP_TYPE_IDS.keys()),
+                        help="Grasp type for point-cloud policy conditioning. "
+                             "If omitted, will be prompted for PC checkpoints.")
     args = parser.parse_args()
 
     global MAX_JOINT_STEP_RAD
@@ -624,11 +809,12 @@ def main():
         dry_run=args.dry_run,
         results_dir=args.results_dir,
         num_inference_steps=args.inference_steps,
+        grasp_type=args.grasp_type,
     )
 
     def _cleanup(signum=None, frame=None):
         print("\nCaught interrupt — cleaning up...")
-        # Run cleanup in a thread so we can force-exit if it hangs
+
         def _do_cleanup():
             try:
                 evaluator._stop_live_control()
@@ -645,6 +831,7 @@ def main():
             except Exception:
                 pass
             cv2.destroyAllWindows()
+
         cleanup_thread = threading.Thread(target=_do_cleanup, daemon=True)
         cleanup_thread.start()
         cleanup_thread.join(timeout=5)
