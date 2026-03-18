@@ -33,14 +33,17 @@ We are building a **grasp-taxonomy-aware 3D diffusion policy** for dexterous cli
 
 | Metric | Value |
 |--------|-------|
-| **Episodes collected** | 37 |
-| **Total timesteps** | 6,435 |
-| **Hold** | 0 (edge_A) |
+| **Episodes collected** | 0 (valid) |
+| **Hold** | 0 (edge_A) — ready to collect |
 | **Grasp type** | jug |
-| **Quality** | 37 good, 0 bad |
+| **Pipeline status** | ✅ Fixed and verified |
 
-**Target per hold:** 50–80 good episodes (RESEARCH_PLAN).  
-**Current:** ~37 / 60 for hold 0 (jug) — about halfway for this hold.
+**Previous 50 jug episodes were discarded.** The point cloud workspace bounds had `z_min=-0.02`, causing 95% of 1024 sampled points to land on the flat table rather than the hold. The trained pilot model (`checkpoints/pc_large/best.pt`) confirmed this: it produced identical arm motion regardless of hold position or zero-PC input, meaning it learned to ignore the point cloud entirely.
+
+**Fix applied (2026-03-18):** `z_min` corrected to `0.006` in `DEFAULT_WORKSPACE_BOUNDS`. Verified with `check_pc_sensitivity.py` — full hold geometry captured, Z centroid ≈ 0.034 m, zero table noise.
+
+**Target per hold:** 50–80 good episodes (RESEARCH_PLAN).
+**Current:** 0 / 50 for hold 0 — ready to recollect with fixed pipeline.
 
 ---
 
@@ -85,10 +88,10 @@ At deployment: Part 1 feeds its label into Part 2 as the conditioning signal.
 ## 5. Next Steps
 
 ### Part 2 (Grasp Policy) — Immediate
-1. **Finish data collection for hold 0** — ~23 more episodes to reach 60
-2. **Collect data for holds 1–3** — crimp, sloper, pinch (50–80 each)
-3. **Pilot training** — train on hold 0 only, validate pipeline
-4. **Real-robot evaluation** — test policy on Franka + LEAP
+1. ⏳ **Recollect hold 0 data** — 50 jug episodes with fixed z_min=0.006 pipeline
+2. **Upload to HuggingFace** and retrain on cluster
+3. **Pilot eval on robot** — verify model uses PC: `--zero-pc` vs normal must produce different actions
+4. **Collect data for holds 1–3** — crimp, sloper, pinch (50 each) — only after hold 0 eval confirms PC is used
 5. **Scale and ablations** — full dataset, compare with/without grasp conditioning, PC vs RGB baseline
 
 ### Part 1 (Hold Identifier) — Future
@@ -103,5 +106,5 @@ At deployment: Part 1 feeds its label into Part 2 as the conditioning signal.
 - **Problem:** Dexterous grasping needs different hand configurations per object geometry; no prior work on grasp-type-conditioned diffusion policies for climbing holds.
 - **Two-part approach:** (1) VLM classifier identifies hold type from RGB image; (2) DP3-style point cloud policy executes the grasp conditioned on that type.
 - **Hardware:** Franka + LEAP Hand, 4× RealSense, VR teleoperation.
-- **Progress:** Full pipeline implemented and calibrated; 37 jug episodes collected for hold 0; ready for pilot training once we reach ~60 episodes.
-- **Next:** Complete hold 0 data → pilot train → real-robot eval → scale to all 4 hold types → implement Part 1 VLM identifier.
+- **Progress:** Full pipeline implemented and calibrated; workspace bounds verified (`z_min=0.006`); previous bad-PC dataset discarded; ready to recollect with correct pipeline.
+- **Next:** Recollect 50 jug episodes (hold 0) with fixed pipeline → retrain → verify model uses PC → collect holds 1–3 → scale → Part 1 VLM identifier.

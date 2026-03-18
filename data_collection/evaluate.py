@@ -62,6 +62,10 @@ CAMERA_RAW_W = 848
 CAMERA_RAW_H = 480
 CONTROL_FREQ = 10
 
+# Verified 2026-03-18: joints where arm is fully clear of all 4 RealSense cameras.
+PARK_ARM_JOINTS = np.array([-0.11426599, -0.56029082, -0.06635159, -2.17443357,
+                              0.04112932,  2.15592909,  0.54378958], dtype=np.float64)
+
 MAX_JOINT_STEP_RAD = 0.03
 
 HOLD_NAMES = {0: "edge_A", 1: "edge_B", 2: "sloper", 3: "pinch", 4: "test_edge"}
@@ -165,12 +169,13 @@ def build_state_vector_30(arm_joints, ee_pos, ee_quat, hand_joints):
 class PolicyEvaluator:
     def __init__(self, ckpt_path, hold_id=0, n_trials=5, max_steps=200,
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
-                 num_inference_steps=10, grasp_type=None):
+                 num_inference_steps=10, grasp_type=None, zero_pc=False):
         self.hold_id = hold_id
         self.n_trials = n_trials
         self.max_steps = max_steps
         self.action_horizon = action_horizon
         self.dry_run = dry_run
+        self.zero_pc = zero_pc
         self.num_inference_steps = num_inference_steps
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
@@ -554,28 +559,54 @@ class PolicyEvaluator:
 
         cv2.namedWindow("Eval", cv2.WINDOW_NORMAL)
 
-        # If point cloud mode: capture clean scene PC before starting
+        # If point cloud mode: auto-park arm, capture PC, return to reset pose
         scene_pc = None
         if self.use_pc:
-            print("Point cloud mode: move arm OUT of all camera views, "
-                  "then press SPACE to capture clean scene PC...")
-            while True:
-                imgs = self._read_images()
-                canvas = self._make_canvas(imgs,
-                    f"Trial {trial_idx+1} - MOVE ARM OUT then SPACE for PC")
-                cv2.imshow("Eval", canvas)
-                if (cv2.waitKey(50) & 0xFF) == ord(" "):
-                    break
-            print("  Capturing point cloud...", end=" ", flush=True)
-            scene_pc = self._capture_clean_point_cloud()
-            n_valid = np.sum(np.any(scene_pc != 0, axis=-1))
-            print(f"done ({n_valid}/{PC_N_POINTS} valid pts)")
+            # Auto-park
+            if self.fa is not None:
+                print("  Moving arm to park pose (out of camera view)...")
+                try:
+                    self.fa.stop_skill()
+                except Exception:
+                    pass
+                time.sleep(0.3)
+                self.fa.goto_joints(
+                    PARK_ARM_JOINTS.tolist(), duration=4.0,
+                    dynamic=False, buffer_time=0.2, block=True)
+                time.sleep(1.5)
+                print("  Arm at park pose.")
+            else:
+                print("  WARNING: No FrankaArm — ensure arm is manually out of camera view.")
 
-            print("Return arm to approach pose, then press SPACE to start policy...")
+            # Capture PC
+            if self.zero_pc:
+                print("  [--zero-pc] Feeding all-zeros to policy.")
+                scene_pc = np.zeros((PC_N_POINTS, 3), dtype=np.float32)
+            else:
+                print("  Capturing point cloud...", end=" ", flush=True)
+                scene_pc = self._capture_clean_point_cloud()
+                n_valid = np.sum(np.any(scene_pc != 0, axis=-1))
+                print(f"done ({n_valid}/{PC_N_POINTS} valid pts)")
+
+            # Return arm to reset (approach) pose
+            if self.fa is not None:
+                print("  Returning arm to approach pose...")
+                try:
+                    self.fa.stop_skill()
+                except Exception:
+                    pass
+                time.sleep(0.3)
+                self.fa.goto_joints(
+                    RESET_ARM_JOINTS.tolist(), duration=4.0,
+                    dynamic=False, buffer_time=0.2, block=True)
+                time.sleep(0.5)
+                print("  Arm at approach pose.")
+
+            print("Press SPACE to start policy rollout...")
             while True:
                 imgs = self._read_images()
                 canvas = self._make_canvas(imgs,
-                    f"Trial {trial_idx+1} - RETURN ARM then SPACE to start")
+                    f"Trial {trial_idx+1} - SPACE to start")
                 cv2.imshow("Eval", canvas)
                 if (cv2.waitKey(50) & 0xFF) == ord(" "):
                     break
@@ -795,6 +826,9 @@ def main():
                         choices=list(GRASP_TYPE_IDS.keys()),
                         help="Grasp type for point-cloud policy conditioning. "
                              "If omitted, will be prompted for PC checkpoints.")
+    parser.add_argument("--zero-pc", action="store_true",
+                        help="Feed all-zeros as the point cloud instead of capturing. "
+                             "Use to test whether the model ignores the PC input.")
     args = parser.parse_args()
 
     global MAX_JOINT_STEP_RAD
@@ -810,6 +844,7 @@ def main():
         results_dir=args.results_dir,
         num_inference_steps=args.inference_steps,
         grasp_type=args.grasp_type,
+        zero_pc=args.zero_pc,
     )
 
     def _cleanup(signum=None, frame=None):

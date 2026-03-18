@@ -201,6 +201,13 @@ Key functions:
 
 **Important:** `self.cameras.cameras` (on a `ThreadedCameras` instance) is the list of individual `CameraClass` objects — use this to get per-camera calibration.
 
+**Workspace bounds `z_min` history (critical):**
+- `z_min=-0.02` (original) → 95% of 1024 points land on flat table, model ignores PC — **DO NOT USE**
+- `z_min=0.008` → captures hold but clips hold base detail
+- `z_min=0.006` → **correct value**, verified 2026-03-18: full hold geometry, Z centroid ≈ 0.034 m, zero table noise
+
+Always run `check_pc_sensitivity.py` before collecting data to confirm PC looks correct.
+
 ### `train.py`
 
 Two modes, selected by `--point-cloud`:
@@ -289,10 +296,16 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
 
 | Checkpoint | Dataset | State | Mode | Epochs | Notes |
 |-----------|---------|-------|------|--------|-------|
-| `checkpoints/quick_sanity/best.pt` | climbing_holds.zarr | 30-dim | Image | 50 | Sanity check only |
-| `checkpoints/overnight_224/best.pt` | climbing_holds.zarr | 30-dim | Image | 300 | Real-robot tested: arm approached hold but grasp imprecise |
+| `checkpoints/quick_sanity/best.pt` | climbing_holds_legacy_image.zarr | 30-dim | Image | 50 | Sanity check only |
+| `checkpoints/overnight_224/best.pt` | climbing_holds_legacy_image.zarr | 30-dim | Image | 300 | Real-robot tested: arm approached hold but grasp imprecise |
+| `checkpoints/pc_large/best.pt` | ~~climbing_holds.zarr~~ (DELETED) | 23-dim | PC | 5000 | **INVALID** — trained on bad PC data (z_min=-0.02, 95% table noise). Robot did same motion regardless of hold position or zero-PC input. Checkpoint must not be used. |
 
-**Real-robot result (overnight_224):** Policy successfully rotated arm toward hold but didn't grasp precisely or execute pull motion. This motivated the research upgrade to point clouds + grasp type conditioning.
+**Dataset status (2026-03-18):**
+- `datasets/climbing_holds_legacy_image.zarr` — 44 eps, 30-dim, image-only. **VALID.** Use for RGB ablation baseline.
+- `datasets/climbing_holds_v2.zarr` — 73 eps, 30-dim, image-only. **VALID.** Legacy.
+- `datasets/climbing_holds.zarr` — **DOES NOT EXIST** — old 50-ep PC dataset was deleted (bad z_min). Will be recreated by fresh collection with z_min=0.006.
+
+**Next training run:** recollect 50 jug episodes → retrain PC model → verify robot uses PC (zero-PC vs real-PC actions must differ).
 
 ---
 

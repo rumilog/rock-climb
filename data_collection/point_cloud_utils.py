@@ -22,10 +22,13 @@ import numpy as np
 #   - Rock climbing hold (~6-7cm): Z up to  0.073m
 #   - Scale is ~1:1 (1 cm real ≈ 0.01 m world-Z)
 #   - z_max=0.30 covers a ~25cm-tall jug with margin
+# z_min=0.006 is at the table surface (table tops out at 0.006) to capture
+# the hold base and small details; still excludes table bulk (Z < 0.006).
+# Prior z_min=-0.02 caused 95% of 1024 FPS points to land on the table.
 DEFAULT_WORKSPACE_BOUNDS = {
     "x_min": 0.30, "x_max": 0.85,
     "y_min": -0.35, "y_max": 0.35,
-    "z_min": -0.02, "z_max": 0.30,
+    "z_min": 0.006, "z_max": 0.30,
 }
 
 DEPTH_SCALE = 0.001  # RealSense default: uint16 mm → meters

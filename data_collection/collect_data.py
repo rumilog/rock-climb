@@ -24,12 +24,14 @@ Keyboard (click the preview window):
     q      = quit
 
 Point-cloud episode flow (--point-cloud):
-    1. Press SPACE to initiate episode
-       → "Move arm OUT of camera view, then press SPACE to capture clean scene"
-    2. Press SPACE again after moving arm out
-       → Captures clean point cloud snapshot (arm not visible)
-       → "Return arm to approach pose, then press SPACE to begin recording"
-    3. Press SPACE to begin teleoperation recording
+    1. Place hold, then press SPACE to initiate episode
+       → Arm automatically moves to park pose (out of all camera views)
+       → Point cloud is captured automatically
+       → "Return arm to approach pose using VR, then press SPACE to begin recording"
+    2. Use VR controller to position arm at approach pose, then press SPACE
+       → Recording begins
+    3. Teleop the grasp, then press SPACE to stop
+    4. Press g / b / d to save or discard
 """
 
 import os
@@ -97,6 +99,10 @@ DEFAULT_TASK_NAME = "climbing_holds"
 # Number of depth frames to average when capturing point cloud
 PC_CAPTURE_N_FRAMES = 5
 PC_N_POINTS = 1024
+
+# Verified 2026-03-18: joints where arm is fully clear of all 4 RealSense cameras.
+PARK_ARM_JOINTS = np.array([-0.11426599, -0.56029082, -0.06635159, -2.17443357,
+                              0.04112932,  2.15592909,  0.54378958], dtype=np.float64)
 
 
 # ===========================================================================
@@ -232,7 +238,7 @@ class DataCollector:
         self.episode_buf = None
 
         # Point cloud episode state machine
-        # States: "idle", "waiting_for_arm_out", "waiting_for_approach"
+        # States: "idle", "waiting_for_approach"
         self._pc_state = "idle"
         self._pending_pc = None  # (1024, 3) captured clean scene PC
 
@@ -252,6 +258,8 @@ class DataCollector:
             self.grasp_type = self._prompt_grasp_type()
 
         self._setup_franka()
+        if self.use_point_cloud and not self.skip_franka:
+            self._cleanup_stale_ipc_files()
         self._setup_leap_hand()
         self._setup_cameras()
         self._setup_dataset()
@@ -332,6 +340,62 @@ class DataCollector:
         except Exception as e:
             print(f"  WARNING: Franka ROS setup failed: {e}")
             self.fa = None
+
+    # File-based IPC paths (must match frankapy_extensions.py)
+    _PARK_REQUEST_FILE = "/tmp/franka_park_request"
+    _PARK_DONE_FILE = "/tmp/franka_park_done"
+    _PARK_RESUME_FILE = "/tmp/franka_park_resume"
+
+    def _cleanup_stale_ipc_files(self):
+        """Remove leftover IPC files from a previous crashed session."""
+        import json as _json
+        for fpath in [self._PARK_REQUEST_FILE, self._PARK_DONE_FILE, self._PARK_RESUME_FILE]:
+            try:
+                os.remove(fpath)
+            except OSError:
+                pass
+        print("[PC] Auto-park via IPC ready (GotoPoseLive handles arm movement).")
+
+    def _move_arm_to_park(self):
+        """Request GotoPoseLive (Terminal 1) to park the arm via file-based IPC.
+
+        This does NOT create a second FrankaArm or call stop_skill() — the
+        GotoPoseLive run loop in Terminal 1 handles the park itself, then
+        re-initializes its own live skill so VR teleop resumes seamlessly.
+        """
+        import json as _json
+
+        print("[PC] Requesting arm park via IPC...")
+        # Write park request
+        with open(self._PARK_REQUEST_FILE, "w") as f:
+            _json.dump({"joints": PARK_ARM_JOINTS.tolist()}, f)
+
+        # Wait for GotoPoseLive to finish parking
+        timeout = 15.0  # generous: 4s move + 1.5s settle + margin
+        start = time.time()
+        while time.time() - start < timeout:
+            if os.path.exists(self._PARK_DONE_FILE):
+                print("[PC] Arm at park pose (confirmed by Terminal 1).")
+                return
+            time.sleep(0.1)
+
+        print("[PC] WARNING: Park request timed out after {:.0f}s. "
+              "Is VR_Teleoperation_Minimum.py running?".format(timeout))
+        # Clean up stale request
+        try:
+            os.remove(self._PARK_REQUEST_FILE)
+        except OSError:
+            pass
+
+    def _signal_park_resume(self):
+        """Tell GotoPoseLive it can resume live control after PC capture."""
+        with open(self._PARK_RESUME_FILE, "w") as f:
+            f.write("resume")
+        # Clean up done file
+        try:
+            os.remove(self._PARK_DONE_FILE)
+        except OSError:
+            pass
 
     def _setup_leap_hand(self):
         if self.skip_leap:
@@ -517,9 +581,6 @@ class DataCollector:
         if self.recording:
             status = f"REC  hold={hold_name}  steps={ep_len}"
             bar_color = (0, 0, 255)
-        elif self._pc_state == "waiting_for_arm_out":
-            status = f"MOVE ARM OUT OF VIEW, then SPACE to capture PC"
-            bar_color = (0, 165, 255)
         elif self._pc_state == "waiting_for_approach":
             status = f"RETURN ARM to approach pose, then SPACE to record"
             bar_color = (0, 200, 255)
@@ -650,14 +711,7 @@ class DataCollector:
     # -------------------------------------------------------------------
     def _handle_key(self, key):
         if key == ord(" "):
-            if self._pc_state == "waiting_for_arm_out":
-                # Operator has moved arm out of view — capture clean PC
-                pc = self._capture_clean_point_cloud()
-                self._pending_pc = pc
-                self._pc_state = "waiting_for_approach"
-                print("Point cloud captured.")
-                print(">>> Return arm to approach pose, then press SPACE to begin recording.")
-            elif self._pc_state == "waiting_for_approach":
+            if self._pc_state == "waiting_for_approach":
                 # Operator positioned arm — begin recording with captured PC
                 self._begin_recording()
                 self._pc_state = "idle"
@@ -683,9 +737,14 @@ class DataCollector:
 
     def _start_episode(self):
         if self.use_point_cloud:
-            print(">>> Move arm OUT of all camera views (arm not visible), "
-                  "then press SPACE to capture clean scene point cloud.")
-            self._pc_state = "waiting_for_arm_out"
+            self._move_arm_to_park()
+            pc = self._capture_clean_point_cloud()
+            self._pending_pc = pc
+            # Signal GotoPoseLive to resume live control so VR teleop works again
+            self._signal_park_resume()
+            self._pc_state = "waiting_for_approach"
+            print(">>> VR teleop resuming — position arm at approach pose, "
+                  "then press SPACE to begin recording.")
         else:
             self._begin_recording()
 
