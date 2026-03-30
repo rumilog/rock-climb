@@ -61,6 +61,11 @@ for p in [FRANKA_SCRIPTS_DIR, LEAP_DIR, LEAP_API_DIR, SCRIPT_DIR]:
 # ---------------------------------------------------------------------------
 # Always-available imports only; hardware deferred to setup methods.
 # ---------------------------------------------------------------------------
+# Suppress noisy robomail library warnings before importing it
+import logging as _logging
+_logging.getLogger("root").setLevel(_logging.WARNING)
+_logging.getLogger("robomail").setLevel(_logging.WARNING)
+
 import robomail.vision as vis
 from episode_storage import (
     ZarrDatasetWriter, EpisodeBuffer, resize_image,
@@ -93,7 +98,7 @@ HOLD_NAMES = {
     4: "test_edge",   # held-out for evaluation
 }
 
-DEFAULT_DATASET_DIR = os.path.join(TELE_ROOT, "datasets")
+DEFAULT_DATASET_DIR = "/mnt/ssd/rumi_tele_datasets"
 DEFAULT_TASK_NAME = "climbing_holds"
 
 # Number of depth frames to average when capturing point cloud
@@ -113,10 +118,8 @@ class LeapHandRecorder:
     def __init__(self, port=LEAP_PORT):
         from leap_pip_dip_teleop import LeapPipDipTeleop
         import leap_hand_utils.leap_hand_utils as lhu
-        import logging
-        logging.getLogger("root").setLevel(logging.WARNING)
         self._lhu = lhu
-        self.teleop = LeapPipDipTeleop(port=port)
+        self.teleop = LeapPipDipTeleop(port=port, verbose=False)
         self._lock = threading.Lock()
         self._last_positions_allegro = np.zeros(16, dtype=np.float32)
         self._running = False
@@ -155,12 +158,10 @@ class LeapHandRecorder:
             now = time.time()
             if now - last_report >= 5.0:
                 if msg_count == 0:
-                    print(f"  [LEAP UDP] No finger data received in last 5s — "
+                    print(f"  [LEAP] WARNING: No finger data in last 5s — "
                           f"is VR_Teleoperation_Minimum.py running?")
-                else:
-                    print(f"  [LEAP UDP] {msg_count} msgs, "
-                          f"{write_ok} writes OK, {write_fail} failed "
-                          f"({msg_count/5.0:.1f} Hz)")
+                elif write_fail > 0:
+                    print(f"  [LEAP] {write_fail}/{msg_count} write failures in last 5s")
                 msg_count = 0
                 write_ok = 0
                 write_fail = 0
@@ -238,9 +239,10 @@ class DataCollector:
         self.episode_buf = None
 
         # Point cloud episode state machine
-        # States: "idle", "waiting_for_approach"
+        # States: "idle", "parking", "scanning", "waiting_for_approach"
         self._pc_state = "idle"
         self._pending_pc = None  # (1024, 3) captured clean scene PC
+        self._last_canvas = None  # last rendered preview canvas for status overlays
 
     # -------------------------------------------------------------------
     # Setup
@@ -416,13 +418,15 @@ class DataCollector:
             self.leap_recorder = None
 
     def _setup_cameras(self):
+        import io, contextlib
         print(f"[3/4] Starting cameras {self.cam_numbers}...")
-        self.cameras = vis.ThreadedCameras(
-            cam_numbers=self.cam_numbers,
-            image_height=CAMERA_RAW_H, image_width=CAMERA_RAW_W,
-            get_point_cloud=False, get_verts=False,
-        )
-        frames = self.cameras.get_next_frames()
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.cameras = vis.ThreadedCameras(
+                cam_numbers=self.cam_numbers,
+                image_height=CAMERA_RAW_H, image_width=CAMERA_RAW_W,
+                get_point_cloud=False, get_verts=False,
+            )
+            frames = self.cameras.get_next_frames()
         for i, (color, depth, _, _) in enumerate(frames):
             has_depth = depth is not None and depth.size > 0
             print(f"  Camera {self.cam_numbers[i]}: {color.shape} OK"
@@ -575,30 +579,46 @@ class DataCollector:
                     for i in range(0, len(previews), ncols)]
             canvas = np.vstack(rows)
 
-        hold_name = HOLD_NAMES.get(self.hold_id, str(self.hold_id))
         ep_len = len(self.episode_buf) if self.episode_buf else 0
 
         if self.recording:
-            status = f"REC  hold={hold_name}  steps={ep_len}"
+            status = f"RECORDING — step {ep_len}  |  press SPACE to stop"
             bar_color = (0, 0, 255)
+        elif self._pc_state == "parking":
+            status = "Moving arm to park pose — please wait..."
+            bar_color = (0, 165, 255)
+        elif self._pc_state == "scanning":
+            status = "Scanning point cloud — do not move the hold..."
+            bar_color = (0, 165, 255)
         elif self._pc_state == "waiting_for_approach":
-            status = f"RETURN ARM to approach pose, then SPACE to record"
+            status = "Point cloud captured  |  Position arm, then press SPACE to record"
             bar_color = (0, 200, 255)
+        elif self.episode_buf is not None and ep_len > 0:
+            status = f"Stopped ({ep_len} steps)  |  g = GOOD    b = BAD    d = DISCARD"
+            bar_color = (0, 220, 220)
         else:
-            status = f"IDLE  hold={hold_name}"
+            status = "Press SPACE to start episode"
             bar_color = (0, 200, 0)
-            if self.episode_buf is not None and ep_len > 0:
-                status += f"  [{ep_len} steps — press g/b/d]"
 
         cv2.putText(canvas, status, (5, canvas.shape[0] - 8),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, bar_color, 1)
 
-        ep_count = self.dataset.num_episodes
-        gt_str = f" [{self.grasp_type}]" if self.grasp_type else ""
-        cv2.putText(canvas, f"Saved: {ep_count}{gt_str}",
-                    (canvas.shape[1] - 160, canvas.shape[0] - 8),
+        total_count = self.dataset.num_episodes
+        hold_count = 0
+        if total_count > 0:
+            hold_ids = self.dataset.root["meta/hold_id"][:]
+            hold_count = int(np.sum(hold_ids == self.hold_id))
+        hold_name = HOLD_NAMES.get(self.hold_id, f"hold{self.hold_id}")
+        line1 = f"{hold_name}: {hold_count}/50"
+        line2 = f"total: {total_count}"
+        x = canvas.shape[1] - 160
+        h = canvas.shape[0]
+        cv2.putText(canvas, line1, (x, h - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
+        cv2.putText(canvas, line2, (x, h - 8),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
 
+        self._last_canvas = canvas.copy()
         cv2.imshow("Data Collection", canvas)
 
     # -------------------------------------------------------------------
@@ -657,7 +677,10 @@ class DataCollector:
 
             if self.show_preview:
                 self._show_preview_window(raw_frames)
-                key = cv2.waitKey(1) & 0xFF
+                key = cv2.waitKeyEx(1)
+                # Arrow keys pass through as-is; regular keys masked to 0xFF.
+                if key not in (65361, 65362, 65363, 65364):
+                    key = key & 0xFF
                 self._handle_key(key)
             else:
                 self._poll_stdin()
@@ -678,7 +701,7 @@ class DataCollector:
 
         def _reader():
             try:
-                import tty, termios
+                import tty, termios, select
                 fd = sys.stdin.fileno()
                 old = termios.tcgetattr(fd)
             except (ImportError, Exception):
@@ -690,6 +713,10 @@ class DataCollector:
                     ch = sys.stdin.read(1)
                     if not ch:
                         break
+                    # Detect arrow key escape sequences (\x1b [ A/B/C/D)
+                    if ch == '\x1b' and select.select([sys.stdin], [], [], 0.05)[0]:
+                        rest = sys.stdin.read(2)
+                        ch = ch + rest  # e.g. '\x1b[A'
                     with self._stdin_lock:
                         self._stdin_key = ch
             finally:
@@ -704,7 +731,7 @@ class DataCollector:
                 key = self._stdin_key
                 self._stdin_key = None
         if key is not None:
-            self._handle_key(ord(key) if len(key) == 1 else -1)
+            self._handle_key(ord(key) if len(key) == 1 else key)
 
     # -------------------------------------------------------------------
     # Keyboard handling
@@ -734,10 +761,42 @@ class DataCollector:
             if self.episode_buf is not None and len(self.episode_buf) > 0:
                 self._save_episode(quality=1)
             self.running = False
+        elif key in (65361, 65362, 65363, 65364):  # Arrow keys — thumb joint tuning
+            if self.leap_recorder is not None:
+                t = self.leap_recorder.teleop
+                if key == 65361:    # Left — previous joint
+                    t.thumb_selected = (t.thumb_selected - 1) % 4
+                elif key == 65363:  # Right — next joint
+                    t.thumb_selected = (t.thumb_selected + 1) % 4
+                elif key == 65362:  # Up — nudge +
+                    t.thumb_offsets[t.thumb_selected] += t.thumb_step
+                elif key == 65364:  # Down — nudge -
+                    t.thumb_offsets[t.thumb_selected] -= t.thumb_step
+                name = t.thumb_joint_names[t.thumb_selected]
+                val = t.thumb_offsets[t.thumb_selected]
+                print(f"  [THUMB] {name} (joint {12 + t.thumb_selected}): "
+                      f"{val:+.3f} rad ({np.degrees(val):+.1f}°)  "
+                      f"| all offsets: {np.round(np.degrees(t.thumb_offsets), 1)}")
+
+    def _force_status_update(self, text, color=(0, 165, 255)):
+        """Immediately redraw the preview status bar during blocking operations."""
+        if not self.show_preview or self._last_canvas is None:
+            return
+        canvas = self._last_canvas.copy()
+        h = canvas.shape[0]
+        canvas[h - 22:, :] = (40, 40, 40)
+        cv2.putText(canvas, text, (5, h - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        cv2.imshow("Data Collection", canvas)
+        cv2.waitKey(1)
 
     def _start_episode(self):
         if self.use_point_cloud:
+            self._pc_state = "parking"
+            self._force_status_update("Moving arm to park pose — please wait...")
             self._move_arm_to_park()
+            self._pc_state = "scanning"
+            self._force_status_update("Scanning point cloud — do not move the hold...")
             pc = self._capture_clean_point_cloud()
             self._pending_pc = pc
             # Signal GotoPoseLive to resume live control so VR teleop works again

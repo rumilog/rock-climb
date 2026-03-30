@@ -60,7 +60,7 @@ sys.stdout.reconfigure(line_buffering=True)
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 TELE_ROOT = SCRIPT_DIR.parent
-DEFAULT_ZARR = TELE_ROOT / "datasets" / "climbing_holds.zarr"
+DEFAULT_ZARR = Path("/mnt/ssd/rumi_tele_datasets/climbing_holds.zarr")
 DEFAULT_CKPT_DIR = TELE_ROOT / "checkpoints"
 
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)

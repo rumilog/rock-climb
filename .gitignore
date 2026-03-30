@@ -2,6 +2,9 @@
 TeleoperationUnity/
 robomail/
 
+# Reference repos (not part of this project)
+beavr-bot-reference/
+
 # Large binary data (transfer via rsync/scp)
 datasets/
 checkpoints/

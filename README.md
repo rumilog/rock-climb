@@ -60,13 +60,13 @@ print('Grasp type IDs:', z['meta/grasp_type_id'][:5], '...')
 
 Expected output:
 ```
-Episodes: 50
-Timesteps: 8381
-Point cloud shape: (8381, 1024, 3)
+Episodes: 17
+Timesteps: 2937
+Point cloud shape: (2937, 1024, 3)
 Grasp type IDs: [3 3 3 3 3] ...
 ```
 
-(grasp_type_id=3 is jug — this is a jug-only pilot dataset on hold 0)
+(grasp_type_id=3 is jug — this is a jug-only pilot dataset on hold 0, clean PC with z_min=0.006)
 
 ### 4. Run training
 
@@ -117,7 +117,7 @@ cat ../checkpoints/pc_pilot/training_status.md
 | Action horizon | 8 timesteps |
 | Action dim | 23 (7 arm joints + 16 hand joints) |
 | Point cloud | 1024 pts, XYZ only, world frame, FPS downsampled |
-| Dataset | 50 episodes, 8381 timesteps, hold 0 (jug) — pilot |
+| Dataset | 17 episodes, 2937 timesteps, hold 0 (jug) — clean pilot (z_min=0.006) |
 
 ---
 

@@ -19,7 +19,7 @@ import zarr
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TELE_ROOT = os.path.dirname(SCRIPT_DIR)
-DEFAULT_ZARR = os.path.join(TELE_ROOT, "datasets", "climbing_holds.zarr")
+DEFAULT_ZARR = "/mnt/ssd/rumi_tele_datasets/climbing_holds.zarr"
 
 
 def print_summary(root):

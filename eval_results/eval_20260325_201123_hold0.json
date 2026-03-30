@@ -1,0 +1,62 @@
+[
+  {
+    "trial": 0,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "good",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-25T20:07:44.117943",
+    "encoder_type": "point_cloud",
+    "grasp_type": "jug",
+    "grasp_type_id": 3
+  },
+  {
+    "trial": 1,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-25T20:08:32.269608",
+    "encoder_type": "point_cloud",
+    "grasp_type": "jug",
+    "grasp_type_id": 3
+  },
+  {
+    "trial": 2,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "good",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-25T20:09:16.205429",
+    "encoder_type": "point_cloud",
+    "grasp_type": "jug",
+    "grasp_type_id": 3
+  },
+  {
+    "trial": 3,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "good",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-25T20:10:15.964435",
+    "encoder_type": "point_cloud",
+    "grasp_type": "jug",
+    "grasp_type_id": 3
+  },
+  {
+    "trial": 4,
+    "hold_id": 0,
+    "hold_name": "edge_A",
+    "rating": "bad",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-03-25T20:11:23.311814",
+    "encoder_type": "point_cloud",
+    "grasp_type": "jug",
+    "grasp_type_id": 3
+  }
+]

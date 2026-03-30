@@ -56,12 +56,24 @@ Climbing holds are uniquely suited as a dexterous manipulation benchmark because
 - **Cutkosky/GRASP Taxonomy**: Feix et al., "The GRASP Taxonomy of Human Grasp Types," IEEE THMS 2016.
   - 33 canonical human grasp types
   - We map climbing hold grasps to this taxonomy
+- **Dexonomy**: RSS 2025. [arXiv:2504.18829](https://arxiv.org/abs/2504.18829) ⚠️ CLOSEST COMPETITOR — MUST CITE AND DIFFERENTIATE
+  - Conditions on GRASP taxonomy (31 types) from single-view point clouds; Shadow Hand; 82.3% real-world success
+  - **Critical difference**: Dexonomy generates *static grasp poses* (three snapshots: pre-grasp, grasp, squeeze) handed to a motion planner. No imitation learning. No trajectory execution.
+  - Our system learns *continuous visuomotor execution trajectories* (arm + hand from approach through contact) via diffusion policy trained on human demonstrations. Fundamentally different problem.
+  - Reviewers WILL notice this. Have a crisp 2-sentence differentiation ready.
 - **Grasp as You Say**: Tian et al., NeurIPS 2024. [arXiv:2405.19291](https://arxiv.org/abs/2405.19291)
   - Language-conditioned dexterous grasp generation
   - Static poses only — no execution policy
+- **OmniDexVLG**: Dec 2024. [arXiv:2512.03874](https://arxiv.org/abs/2512.03874)
+  - VLM multi-agent reasoning to infer grasp semantics including taxonomy type
+  - Downstream is a grasp pose generator, NOT an execution policy
+- **DexGraspVLA**: AAAI 2026. [arXiv:2502.20900](https://arxiv.org/abs/2502.20900)
+  - VLM high-level planner + diffusion low-level execution policy
+  - VLM plans *what* to grasp (object identity/location), NOT *which grasp type from taxonomy*
+  - Closest to our two-part architecture but no taxonomy conditioning
 - **CrossDex**: ICLR 2025.
   - Universal grasping across hand morphologies
-  - Eigengrasp action space
+  - Eigengrasp action space — not the same as functional taxonomy categories
 
 ### Multi-Modal and Point Cloud Methods
 - **FPV-Net**: Feb 2025. [arXiv:2502.12320](https://arxiv.org/abs/2502.12320)
@@ -212,10 +224,23 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 3. **Hold stability** — can the grasp sustain a gentle pull force?
 4. **Cross-category generalization** — success on held-out test_edge
 5. **Ablations**:
-   - With vs without grasp type conditioning
+   - With vs without grasp type conditioning ← **LOAD-BEARING FOR THE PAPER** — if conditioning doesn't help, the main technical claim collapses. Must run this. Requires `--no-grasp-conditioning` flag in train.py (not yet implemented).
    - Point cloud vs RGB (ResNet baseline)
    - 1024 vs 512 vs 2048 points
    - Effect of number of demonstrations
+
+### Novelty Gap Table (verified via literature search, 2026-03-20)
+
+| Paper | Point Cloud | Grasp Type Cond | Execution Policy | Dexterous Hand |
+|---|---|---|---|---|
+| DP3 (RSS 2024) | ✅ | ❌ | ✅ | ✅ (Allegro) |
+| Dexonomy (RSS 2025) | ✅ | ✅ (31 types) | ❌ pose gen only | ✅ (Shadow) |
+| Grasp as You Say (NeurIPS 2024) | ✅ | ❌ free-form lang | ❌ pose gen only | ✅ |
+| OmniDexVLG (Dec 2024) | partial | ✅ VLM-guided | ❌ pose gen only | ✅ |
+| DexGraspVLA (AAAI 2026) | ❌ | ❌ object ID only | ✅ | ✅ |
+| **Ours** | **✅** | **✅ 4-class discrete** | **✅ arm+hand traj** | **✅ LEAP** |
+
+The combination of all four simultaneously is the novel contribution. Confidence: ~82%.
 
 ## 4. Implementation Plan
 

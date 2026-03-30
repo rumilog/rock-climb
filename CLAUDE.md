@@ -208,3 +208,40 @@ no recovery). Instead, file-based IPC via `/tmp/franka_park_*`:
 4. `GotoPoseLive` sees resume → cleans up files → sets `self.initialize = True` → restarts live skill
 
 This way Terminal 1 (VR teleop) never needs to be restarted.
+
+### Thumb IK test file (2026-03-26)
+
+`TeleoperationUnity/LEAP/leaphandv1/for_transfer/leap_thumb_ik_test.py` is a
+drop-in replacement for `leap_pip_dip_teleop.py` that replaces thumb retargeting
+with PyBullet IK. **The working code is NOT modified** — this is a separate test file.
+
+Key facts:
+- Index/Middle/Pinky: identical to `leap_pip_dip_teleop.py` (no change)
+- Thumb: uses the 12 raw bone quaternions (UDP values 16-27) that were previously
+  discarded; FK → BeaVR-style Cartesian transform → PyBullet IK on LEAP URDF
+- Requires `pybullet` (installed in `~/franka` venv as of 2026-03-26)
+- URDF: `beavr-bot-reference/assets/urdf/leap_hand/leap_hand_right.urdf`
+- `beavr-bot-reference/` is gitignored — does not affect pushes
+
+To run the IK test (same two terminals as normal teleop, just swap Terminal 2 script):
+```bash
+cd ~/Desktop/tele/TeleoperationUnity/LEAP/leaphandv1/for_transfer
+python3 leap_thumb_ik_test.py
+```
+
+Tunable constants are marked `# TUNE` at the top of the file. Print diagnostics
+every 100 frames; adjust `VERBOSE_THUMB_EVERY` to change frequency.
+
+### UDP packet format from Unity (28 values)
+
+`HandController.cs` (the LEAP version in `TeleoperationUnity/LEAP/leaphandv1/`) sends
+**28 tab-separated values** when hand tracking is active:
+
+- Values 0–15: 16 joint angles in **degrees**, ordered as
+  Index[DIP, PIP, MCP_Flex, MCP_Abd] × Middle × Pinky × Thumb
+- Values 16–19: Thumb base quaternion (metacarpal, `BoneRotations[3]`) as x,y,z,w
+- Values 20–23: Thumb mid quaternion (proximal, `BoneRotations[4]`) as x,y,z,w
+- Values 24–27: Thumb tip quaternion (distal, `BoneRotations[5]`) as x,y,z,w
+
+`leap_pip_dip_teleop.py` strips to 16 values (discards 16-27).
+`leap_thumb_ik_test.py` uses all 28.
