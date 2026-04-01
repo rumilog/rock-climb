@@ -1,0 +1,125 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+
+\title{Rock Climb: Grasp-Taxonomy-Aware 3D Diffusion Policies for Dexterous Climbing Hold Manipulation}
+\author{Anonymous Authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Dexterous grasping often admits multiple qualitatively distinct strategies (e.g., pinch vs.\ crimp) that require different hand configurations and contact mechanics. Existing diffusion-policy approaches learn a single conditional action distribution per task and typically evaluate grasping as a binary success/failure outcome, without explicitly modeling \emph{grasp taxonomy}. We introduce \textbf{Rock Climb}, a grasp-taxonomy-aware 3D diffusion policy that conditions a DP3-style point-cloud diffusion policy on grasp-type labels (crimp, sloper, pinch, jug) to generate type-specific joint-space action chunks for a Franka arm equipped with a 16-DoF LEAP hand. We further propose a climbing-hold manipulation benchmark where object geometry naturally induces diverse grasp types, enabling controlled evaluation of type-specific performance and generalization across hold instances. Initial experiments target a pilot dataset collected with multi-view depth fusion into a world-frame point cloud, paired with proprioceptive state and grasp-type annotations.
+\end{abstract}
+
+\section{Introduction}
+Learning-based manipulation policies have made rapid progress by pairing expressive function approximators with large-scale demonstration data. However, dexterous grasping remains challenging because small changes in object geometry can demand fundamentally different contact patterns and hand postures. In the domain of climbing holds, the same high-level task---``grasp the hold''---splits into distinct grasp strategies such as \emph{crimp} (curled fingertips on thin edges), \emph{sloper} (open-hand frictional pressing), \emph{pinch} (thumb--finger opposition), and \emph{jug} (power grasp on incut handles). Such grasp types are not merely semantic labels: they correspond to different feasible sets in joint and contact space and different failure modes under load.
+
+Diffusion-based behavior cloning has emerged as a strong paradigm for visuomotor policy learning, generating temporally coherent action sequences via denoising diffusion \citep{chi2023diffusionpolicy,ho2020ddpm}. Recent work shows that simple 3D representations (point clouds) can yield strong generalization while avoiding appearance overfitting \citep{ze2024dp3}, and improved variants extend these ideas to broader settings \citep{ze2024idp3}. Yet, most diffusion-policy formulations treat grasping as a single distribution conditioned on observations, without explicit conditioning on grasp taxonomy; success is typically evaluated as a binary outcome. Recent work on taxonomy-conditioned grasping \citep{dexonomy2025,tian2024graspasyousay} conditions on grasp type but generates static poses rather than executable trajectories, leaving the execution-policy gap unaddressed.
+
+We argue that \textbf{grasp-type awareness} is a key missing axis for dexterous manipulation benchmarks and policies. Human grasp taxonomies provide structured categories that capture qualitative differences in hand--object interaction \citep{feix2016grasp}. Climbing holds offer an attractive testbed: they are commercially standardized, geometrically diverse, and naturally aligned to common grasp types used in the climbing community.
+
+\paragraph{Contributions.}
+This paper introduces:
+(i) a \textbf{grasp-taxonomy-aware 3D diffusion policy} that conditions action diffusion on a grasp-type label in addition to 3D geometry and robot state, building on DP3-style architectures \citep{ze2024dp3};
+(ii) a \textbf{climbing-hold benchmark} designed to elicit multiple grasp types with controlled within-type variation; and
+(iii) an initial \textbf{data collection and evaluation protocol} using multi-view depth fusion, point-cloud downsampling, and joint-space action generation for a Franka + LEAP hand system, informed by recent dexterous data-collection efforts \citep{wang2024dexcap}.
+
+\section{Related Work}
+\subsection{Diffusion Policies for Robot Control}
+Diffusion Policy \citep{chi2023diffusionpolicy} formulates behavior cloning as conditional denoising, generating action trajectories via a temporal U-Net conditioned on a window of observations. This approach leverages the stability and multimodality of diffusion models \citep{ho2020ddpm} and often accelerates inference with deterministic or partially deterministic samplers such as DDIM \citep{song2021ddim}.
+
+DP3 \citep{ze2024dp3} extends diffusion policies to point-cloud observations by using a PointNet-style encoder \citep{qi2017pointnet} to produce a compact 3D representation, enabling generalization in settings where color/texture may be distracting or non-stationary. Follow-on work improves robustness and scope, including improved 3D diffusion policies \citep{ze2024idp3}. Category-level generalization using 3D semantic fields has been explored with substantial gains on unseen instances \citep{wang2024gendp}. Separately, diffusion models have been used for grasp synthesis and dexterous grasp generation \citep{weng2024dexdiffuser}.
+
+\subsection{Dexterous Manipulation Data and Embodiments}
+Collecting high-quality dexterous demonstrations is a major bottleneck. Systems such as DexCap \citep{wang2024dexcap} propose scalable mocap-based pipelines for dexterous data collection, providing practical guidance on sensors, calibration, and capture rates for hand--arm systems. Our setup similarly targets a Franka arm with a dexterous hand, and our benchmark emphasizes object geometries where fine finger configuration matters. Functional pre-grasp manipulation has been studied via diffusion policy with teacher-student distillation across a large set of training objects \citep{wu2024unidexfpm}. CrossDex \citep{crossdex2025} addresses generalization across hand morphologies via eigengrasp representations---a complementary direction to our taxonomy-conditioned execution policy, which targets qualitatively distinct grasps on a fixed embodiment.
+
+\subsection{Grasp Taxonomy and Type-Conditioned Grasping}
+Human grasp taxonomies organize grasps into discrete categories reflecting opposition type, thumb position, and power vs.\ precision characteristics \citep{feix2016grasp}. Several recent lines of work condition dexterous grasp \emph{generation} on such categories, but differ critically from our setting in that they produce static poses rather than executable policies.
+
+Most closely related, \textbf{Dexonomy} \citep{dexonomy2025} conditions on the full 33-type GRASP taxonomy from single-view point clouds to synthesize dexterous grasp poses for a Shadow Hand, reporting 82.3\% real-world success. Critically, Dexonomy is a static \emph{grasp-pose generator}: it produces three snapshots (pre-grasp, grasp, squeeze) handed to a motion planner, with no imitation learning and no continuous trajectory execution. In contrast, Rock Climb learns a continuous visuomotor execution policy from teleoperated demonstrations---arm approach through contact---conditioned jointly on 3D geometry and grasp type, using a diffusion model trained on full action sequences.
+
+Language-conditioned grasp generation \citep{tian2024graspasyousay} extends type-aware synthesis to free-form text prompts on dexterous hands, but similarly produces static poses. OmniDexVLG \citep{omnidexvlg2024} uses a vision-language model to infer grasp semantics and taxonomy type, feeding a downstream pose generator. DexGraspVLA \citep{dexgraspvla2026} combines a VLM high-level planner with a diffusion execution policy, but the VLM selects \emph{which object to grasp} (identity and location) rather than conditioning on a grasp-type taxonomy; no per-type trajectory specialization is learned.
+
+Rock Climb is the first system to condition a \emph{continuous imitation-learning execution policy} on grasp taxonomy for a multi-DoF arm--hand system. Table~\ref{tab:novelty} summarizes the positioning.
+
+\begin{table}[h]
+\centering
+\caption{Comparison along four axes: point cloud input, explicit grasp-taxonomy conditioning, continuous execution policy (vs.\ static pose generation), and dexterous hand embodiment.}
+\label{tab:novelty}
+\begin{tabular}{lcccc}
+\toprule
+Method & Point Cloud & Grasp Type Cond. & Execution Policy & Dexterous Hand \\
+\midrule
+DP3 \citep{ze2024dp3}                         & \checkmark & $\times$          & \checkmark           & \checkmark (Allegro) \\
+Dexonomy \citep{dexonomy2025}                 & \checkmark & \checkmark (31 types) & $\times$ pose-gen & \checkmark (Shadow) \\
+Grasp as You Say \citep{tian2024graspasyousay}& \checkmark & language          & $\times$ pose-gen    & \checkmark \\
+OmniDexVLG \citep{omnidexvlg2024}            & partial    & \checkmark (VLM)  & $\times$ pose-gen    & \checkmark \\
+DexGraspVLA \citep{dexgraspvla2026}          & $\times$   & $\times$ (obj.\ ID) & \checkmark         & \checkmark \\
+\textbf{Rock Climb (ours)}                    & \checkmark & \checkmark (4-class) & \checkmark arm+hand & \checkmark (LEAP) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Problem Formulation}
+We consider episodic manipulation of a static climbing hold placed on a tabletop workspace. At each control step \(t\), the policy observes (i) a fused point cloud \(P \in \mathbb{R}^{N \times 3}\) representing the workspace geometry (captured once per episode in our static-scene setting), (ii) a proprioceptive state history \(s_{t-T_o+1:t}\) over an observation horizon \(T_o\), and (iii) a grasp-type label \(g \in \{0,1,2,3\}\) corresponding to \{crimp, sloper, pinch, jug\}. The policy outputs a chunk of joint-space actions \(a_{t:t+T_p-1}\) over a prediction horizon \(T_p\), and the controller executes the first \(T_a \le T_p\) actions before replanning. The label \(g\) is provided manually during data collection and training; at deployment it can be supplied by a vision-based hold classifier (see \S\ref{sec:discussion}) or by a human operator.
+
+Following prior diffusion-policy work \citep{chi2023diffusionpolicy}, we model the conditional distribution over action sequences as a denoising diffusion process:
+\[
+p(a_{t:t+T_p-1} \mid P, s_{t-T_o+1:t}, g),
+\]
+learned from teleoperated demonstrations via supervised diffusion loss on action sequences.
+
+\section{Method: Grasp-Taxonomy-Aware 3D Diffusion Policy}
+\subsection{Architecture Overview}
+Our policy follows the DP3 design pattern \citep{ze2024dp3}: a point-cloud encoder produces a 3D scene embedding, which is fused with robot state and (here) a grasp-type embedding to condition a 1D temporal U-Net that parameterizes the diffusion denoiser.
+
+\paragraph{Point cloud encoder.}
+We use a PointNet-style encoder \citep{qi2017pointnet} to map \(P \in \mathbb{R}^{N \times 3}\) to a fixed-dimensional feature vector \(z_P\). We use XYZ-only points to reduce sensitivity to appearance and lighting, consistent with 3D diffusion-policy practice \citep{ze2024dp3}.
+
+\paragraph{State and grasp-type conditioning.}
+Robot joint states over \(T_o\) timesteps are embedded via an MLP to obtain \(z_s\). The grasp-type label \(g\) is represented as a one-hot vector and embedded via a small MLP to obtain \(z_g\). The final conditioning vector is
+\[
+z = \mathrm{MLP}([z_P; z_s; z_g]).
+\]
+
+\paragraph{Diffusion model.}
+We use a cosine noise schedule during training as commonly done in diffusion-policy implementations \citep{chi2023diffusionpolicy}. The denoiser is a 1D temporal U-Net that takes noisy action sequences and diffusion timestep embeddings, using feature-wise modulation to condition on \(z\). At inference, we optionally use DDIM sampling for faster rollout \citep{song2021ddim}.
+
+\subsection{Training Objective}
+Let \(a_0\) denote the ground-truth action chunk from demonstrations. Training follows standard DDPM supervision \citep{ho2020ddpm}: sample a diffusion step \(k\), add noise to obtain \(a_k\), and train the network to predict the injected noise (or an equivalent parameterization) conditioned on observations and grasp type. We use AdamW \citep{loshchilov2019adamw} for optimization.
+
+\section{Benchmark and Data Collection Protocol (Rock Climb)}
+\subsection{Hardware and Sensing}
+The benchmark targets a Franka Emika Panda arm (7-DoF) paired with a LEAP Hand (16-DoF). Observations are fused point clouds from multiple depth cameras, transformed into a common world frame via calibrated extrinsics. Each episode begins with capturing a clean point cloud of the workspace with the robot moved out of view, consistent with a static-scene assumption.
+
+\subsection{Dataset Structure}
+Demonstrations consist of time-aligned robot state, action, and a per-episode grasp-type label, along with a per-episode point cloud reused across timesteps. This design reduces per-step compute while preserving the geometric context needed for grasp planning.
+
+\subsection{Evaluation Axes}
+The benchmark is designed to support evaluation beyond binary success. In addition to grasp success rate, we evaluate grasp-type-conditioned behavior (e.g., whether the resulting hand posture matches the requested taxonomy) and generalization across within-type hold variants, as well as across held-out hold instances.
+
+\section{Discussion and Expected Impact}
+\label{sec:discussion}
+By introducing explicit grasp-type conditioning and a benchmark where grasp taxonomy is a first-class variable, Rock Climb aims to disentangle \emph{what} grasp to use from \emph{how} to execute it. This separation enables targeted ablations: comparing policies with and without grasp-type inputs, and measuring type-specific generalization. We anticipate that taxonomy-aware conditioning will be particularly beneficial when multiple grasps are plausible for similar geometries, or when the dataset mixes strategies that would otherwise be averaged by a single unconditional policy.
+
+\paragraph{Two-part deployment architecture.}
+A natural extension toward fully autonomous grasping is a two-part pipeline in which a vision-based hold classifier (Part~1) predicts \(g\) from an RGB image of the hold, feeding the diffusion execution policy (Part~2). This separation is practically attractive: the classifier can be trained or prompted using large-scale online image data (climbing catalogs, route-setting apps), where hold types are well-labeled, while the diffusion policy focuses on learning execution trajectories from physical demonstrations. Climbing holds are geometrically distinctive enough that zero-shot VLM prompting (e.g., GPT-4V or a CLIP-based classifier) may achieve sufficient type accuracy without any fine-tuning, making Part~1 a low-overhead addition to the full system.
+
+\section{Conclusion}
+We presented Rock Climb, a grasp-taxonomy-aware 3D diffusion policy for dexterous climbing hold manipulation. Building on diffusion policies \citep{chi2023diffusionpolicy} and 3D point-cloud conditioning \citep{ze2024dp3}, our method conditions action diffusion on a small grasp taxonomy aligned with climbing practice. The accompanying benchmark provides a structured setting to evaluate type-specific dexterous execution and generalization.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
+

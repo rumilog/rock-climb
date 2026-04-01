@@ -70,6 +70,14 @@ We are building a **grasp-taxonomy-aware 3D diffusion policy** for dexterous cli
    - 37 jug-grasp episodes on hold 0
    - All episodes marked good; point cloud geometry verified
 
+6. **Started paper draft (`Paper writing/main.tex`)**
+   - Full draft: abstract, intro, related work, problem formulation, method, benchmark, discussion, conclusion
+   - Related work covers all key competitors: Dexonomy (RSS 2025, closest), Grasp as You Say (NeurIPS 2024), DexGraspVLA (AAAI 2026), OmniDexVLG, UniDexFPM, GenDP, CrossDex
+   - Novelty gap table (Table 1) — 5-method comparison across 4 axes
+   - Key differentiator from Dexonomy in §2.3: continuous imitation-learning execution trajectories vs static pose snapshots for a motion planner
+   - Discussion §6 covers two-part deployment architecture (VLM classifier → diffusion policy)
+   - **Outstanding:** 7 new bib entries have `FIXME` author placeholders — fill in before submission
+
 ---
 
 ## 4. Two-Part Research Architecture

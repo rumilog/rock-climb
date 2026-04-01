@@ -137,6 +137,29 @@ evaluate.py --checkpoint old_best.pt
 - **point_cloud_utils.py**: intrinsics now read live from `pyrealsense2`, workspace
   bounds calibrated with `check_workspace.py`, and FPS made fast via 20k pre-sample
 
+### Session 4 (2026-04-01) — Paper Draft + Related Work Overhaul
+
+**Files changed:** `Paper writing/main.tex`, `Paper writing/references.bib`
+
+**Problem identified:** Draft related work was missing its closest competitor (Dexonomy, RSS 2025) and several other directly relevant papers. iDP3 venue was wrong. DexCap listed as arXiv instead of RSS 2024.
+
+**Changes made to `Paper writing/main.tex`:**
+- **§1 Introduction:** Added two-sentence citation of Dexonomy + Grasp as You Say to establish the execution-policy gap upfront
+- **§2.1 Diffusion Policies:** Added GenDP (CoRL 2024, 3D semantic fields) sentence
+- **§2.2 Dexterous Manipulation:** Added UniDexFPM and CrossDex (ICLR 2025)
+- **§2.3 Grasp Taxonomy:** Complete rewrite — now covers Dexonomy with 2-sentence differentiation (static pose-gen vs continuous execution policy), plus Grasp as You Say, OmniDexVLG, DexGraspVLA
+- **Table 1 (new):** Novelty gap table — 5 methods vs ours on 4 axes (point cloud / grasp type cond. / execution policy / dexterous hand)
+- **§3 Problem Formulation:** Added sentence: `g` can come from VLM classifier (Part 1) or manual label at deployment; forward-ref to §6
+- **§6 Discussion:** Added `\label{sec:discussion}` + new paragraph on two-part deployment architecture (VLM classifier → diffusion policy)
+
+**Changes made to `Paper writing/references.bib`:**
+- **DexCap:** Fixed venue from `arXiv preprint` → `RSS 2024`
+- **iDP3:** Changed key `ze2025idp3` → `ze2024idp3`, venue `IROS 2025` → `CoRL 2024` (verify comment added)
+- **DexDiffuser:** Updated to `IEEE Robotics and Automation Letters` (verify comment added)
+- **Added 7 new entries:** `dexonomy2025`, `tian2024graspasyousay`, `dexgraspvla2026`, `omnidexvlg2024`, `wu2024unidexfpm`, `wang2024gendp`, `crossdex2025`
+
+**⚠️ ACTION REQUIRED before submission:** All 7 new bib entries have `FIXME: see arXiv:XXXXX` placeholder in the `author` field. Fill in real author lists from each arXiv page. CrossDex also needs its arXiv URL confirmed.
+
 ### Session 3 (2026-03-16) — Research Architecture Discussion
 - Clarified that 1024-pt XYZ point cloud is appropriate for the diffusion policy (trajectory planning) but marginal for classifying hold grasp type from shape alone (~30-150 points land on the hold itself).
 - Confirmed that the diffusion policy does NOT need to predict grasp type — it receives it as a conditioning label. Existing data collection workflow is correct and untouched.

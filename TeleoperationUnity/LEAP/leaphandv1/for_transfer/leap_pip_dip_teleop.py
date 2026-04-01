@@ -112,8 +112,8 @@ class LeapPipDipTeleop:
         # Order: [Index, Middle, Pinky, Thumb]
         self.dip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
         self.pip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.3]
-        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0]
-        self.mcp_abd_post_scale_offset_rad_per_finger = [0, 0.1, 0.2, -0.2]
+        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, -0.7]
+        self.mcp_abd_post_scale_offset_rad_per_finger = [0, 0.1, 0.2, 0.0]
 
         # Thumb joint tuning (arrow keys)
         # Joints: 0=MCP_Abd(12), 1=MCP_Flex(13), 2=PIP(14), 3=DIP(15)

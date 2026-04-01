@@ -99,6 +99,10 @@ The ablation is simply: same model, same dataset, same hyperparams — just drop
 
 - [ ] Verify current cluster training runs cover the ablation sweep (what configs are running?)
 - [ ] Add `--no-grasp-conditioning` to train.py
-- [ ] Add Dexonomy, OmniDexVLG, DexGraspVLA to related work (see RESEARCH_PLAN.md)
-- [ ] Prepare 2-sentence differentiator from Dexonomy (pose gen vs execution policy)
+- [x] Add Dexonomy, OmniDexVLG, DexGraspVLA, Grasp as You Say, UniDexFPM, GenDP, CrossDex to related work (2026-04-01)
+- [x] Prepare 2-sentence differentiator from Dexonomy (pose gen vs execution policy) — now in §2.3 (2026-04-01)
+- [x] Add novelty gap table (Table 1) — 5-method comparison across 4 axes (2026-04-01)
+- [x] Fix reference venues: DexCap → RSS 2024, iDP3 → CoRL 2024, DexDiffuser → RA-L (2026-04-01)
+- [x] Add two-part deployment architecture paragraph to Discussion §6 (2026-04-01)
+- [ ] ⚠️ Fill in FIXME author fields in references.bib for 7 new entries (see IMPLEMENTATION_LOG Session 4)
 - [ ] Run Part 1 VLM zero-shot benchmark (GPT-4V or Claude on 4-class hold classification)
