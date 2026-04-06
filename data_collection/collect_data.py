@@ -368,9 +368,12 @@ class DataCollector:
         import json as _json
 
         print("[PC] Requesting arm park via IPC...")
-        # Write park request
-        with open(self._PARK_REQUEST_FILE, "w") as f:
+        # Write to a tmp file then atomically rename so GotoPoseLive never
+        # sees a partially-written (empty) file and fails json.load().
+        _tmp = self._PARK_REQUEST_FILE + ".tmp"
+        with open(_tmp, "w") as f:
             _json.dump({"joints": PARK_ARM_JOINTS.tolist()}, f)
+        os.replace(_tmp, self._PARK_REQUEST_FILE)
 
         # Wait for GotoPoseLive to finish parking
         timeout = 15.0  # generous: 4s move + 1.5s settle + margin

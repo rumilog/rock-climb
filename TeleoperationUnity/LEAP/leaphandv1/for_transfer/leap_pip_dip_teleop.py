@@ -94,9 +94,9 @@ class LeapPipDipTeleop:
         self.mcp_abd_scale = 1.0
         # Per-finger multipliers [Index, Middle, Pinky, Thumb]
         # Note: these multiply with the global scales above (e.g. pip_scale * pip_scale_per_finger)
-        self.pip_scale_per_finger = [1.0, 1.15, 1.4, 1.7]
-        self.dip_scale_per_finger = [1.0, 1.10, 1.5, 1.8]
-        self.mcp_flex_scale_per_finger = [1.2, 1.6, 2, 5]
+        self.pip_scale_per_finger = [1.2, 1.3, 0.7, 1.7]
+        self.dip_scale_per_finger = [1.5, 1.4, 1.0, 1.8]
+        self.mcp_flex_scale_per_finger = [0.8, 0.8, 0.8, 5]
         self.mcp_abd_scale_per_finger = [1.4, 1.2, 1.4, 5]
         # Per-finger zero-offsets (degrees) to treat measured straight/neutral as 0
         # Set to the EXACT measured value when the joint is straight (can be negative!)
@@ -106,14 +106,14 @@ class LeapPipDipTeleop:
         self.pip_zero_offset_deg_per_finger = [0.0, 0.0, 25.0, 40.0]
         self.mcp_flex_zero_offset_deg_per_finger = [0.0, 0.0, 0.0, 40.0]
         self.mcp_abd_zero_offset_deg_per_finger = [10.0, 0.0, -10.0, 30.0]
-        
+
         # Post-scaling offsets (in RADIANS) - applied AFTER conversion and scaling
         # Simple addition/subtraction to final motor commands for fine-tuning
         # Order: [Index, Middle, Pinky, Thumb]
         self.dip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
         self.pip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.3]
-        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, -0.7]
-        self.mcp_abd_post_scale_offset_rad_per_finger = [0, 0.1, 0.2, 0.0]
+        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
+        self.mcp_abd_post_scale_offset_rad_per_finger = [0.0, 0.1, 0.2, -0.2]
 
         # Thumb joint tuning (arrow keys)
         # Joints: 0=MCP_Abd(12), 1=MCP_Flex(13), 2=PIP(14), 3=DIP(15)
