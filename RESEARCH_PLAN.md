@@ -139,9 +139,14 @@ that require the same grasp strategy). This tests within-category generalization
 6. Operator rates the grasp quality (good/bad)
 7. Data saved to zarr
 
-**Target dataset size**:
-- 4 categories × 3 holds × 60 episodes = ~720 episodes total
-- Plus ~100 episodes on held-out test_edge for evaluation
+**Current dataset (2026-04-14):**
+- 200 episodes collected, 50 per grasp type, all good quality
+  - Hold 0 (edge_A): 50 jug | Hold 1 (edge_B): 50 crimp
+  - Hold 2 (sloper): 50 sloper | Hold 3 (pinch): 50 pinch
+- 29,647 total timesteps, stored in `datasets/climbing_holds.zarr`
+- Held-out test hold (hold 4, test_edge): not yet collected
+
+**Original target**: 4 categories × 3 holds × 60 episodes = ~720 episodes total
 
 ### Observation Space
 
@@ -202,20 +207,26 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 
 ### Training Configuration
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| obs_horizon | 2 | Standard (DP3, original DP) |
-| pred_horizon | 16 | Standard for CNN-based DP |
-| action_horizon | 8 | Standard (original DP) |
-| diffusion_steps | 100 (train), 10 DDIM (inference) | Standard |
-| batch_size | 128 | DP3 |
-| learning_rate | 1e-4 | Standard |
-| epochs | 3000 | DP3 |
-| LR schedule | cosine with 500-step warmup | Standard |
-| EMA | power-law warmup (0.75) | Standard |
-| normalization | min-max to [-1, 1] | DP3 recommendation |
-| point cloud points | 1024 | DP3 |
+| Parameter | Value | Source / Justification |
+|-----------|-------|----------------------|
+| obs_horizon | 2 | Chi et al. 2023, DP3 — provides velocity info without blowing up input |
+| pred_horizon | 16 | Chi et al. 2023 — standard for CNN-based DP |
+| action_horizon | 8 | Chi et al. 2023 — execute 8 of 16 predicted, then re-plan for smoothness |
+| diffusion_steps | 100 (train), 10 DDIM (inference) | DP3, Chi et al. — cosine beta schedule |
+| batch_size | 128 | DP3 — fits in 0.8 GB VRAM on RTX 2080 Ti |
+| learning_rate | 1e-4 | DP3, Chi et al. — standard for AdamW with diffusion |
+| AdamW betas | (0.95, 0.999) | DP3 — β1=0.95 standard for diffusion (noisier loss than typical) |
+| weight_decay | 1e-6 | Minimal regularization, standard |
+| grad_clip | 1.0 | Prevents exploding gradients from large noise samples |
+| epochs | 3000 | DP3 — sufficient for convergence on 200 episodes |
+| LR schedule | 500-step linear warmup + cosine decay | DP3, standard |
+| EMA | power-law warmup (power=0.75), max=0.9999 | Reference implementations |
+| normalization | min-max to [-1, 1] | DP3 recommendation for PC mode |
+| point cloud points | 1024 | DP3 default |
 | downsampling | Farthest Point Sampling (FPS) | DP3 |
+| U-Net down_dims | (256, 512, 1024) | Chi et al. 2023 — appropriate for 200-episode dataset |
+| PointNet | 3→64→128→256, no T-Net | Simplified — T-Net unnecessary for fixed-frame PCs |
+| PC augmentation | jitter σ=0.002 + 5% dropout | DP3 jitter value; dropout simulates partial occlusion |
 
 ### Evaluation Metrics
 
@@ -224,10 +235,24 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 3. **Hold stability** — can the grasp sustain a gentle pull force?
 4. **Cross-category generalization** — success on held-out test_edge
 5. **Ablations**:
-   - With vs without grasp type conditioning ← **LOAD-BEARING FOR THE PAPER** — if conditioning doesn't help, the main technical claim collapses. Must run this. Requires `--no-grasp-conditioning` flag in train.py (not yet implemented).
+   - With vs without grasp type conditioning ← **LOAD-BEARING FOR THE PAPER** — if conditioning doesn't help, the main technical claim collapses. `--no-grasp-conditioning` flag implemented 2026-04-14.
    - Point cloud vs RGB (ResNet baseline)
    - 1024 vs 512 vs 2048 points
    - Effect of number of demonstrations
+
+### Evaluation Protocol
+
+**Trial counts:** 20+ trials per model per grasp type = 160+ total trials minimum.
+
+**Per-trial metrics:**
+1. Grasp success (binary 0/1)
+2. Grasp type correctness (binary 0/1 — human judgment)
+3. Hold stability (binary 0/1 — sustains gentle tug)
+4. Contact time (seconds from start to first contact)
+
+**Statistical tests:** Fisher's exact test for pairwise success rate comparisons.
+Report 95% Wilson confidence intervals on all success rates.
+Primary figure of merit: **delta success rate** (taxonomy model minus no-taxonomy model).
 
 ### Novelty Gap Table (verified via literature search, 2026-03-20)
 
@@ -242,40 +267,32 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 
 The combination of all four simultaneously is the novel contribution. Confidence: ~82%.
 
-## 4. Implementation Plan
+## 4. Implementation Status (Updated 2026-04-14)
 
-### Phase 1: Point Cloud Data Collection Pipeline
-**Changes to collect_data.py:**
-- Enable point cloud capture from all 4 cameras (depth → XYZ via intrinsics)
-- Fuse multi-camera point clouds into world frame using existing calibrations
-- Crop to calibrated workspace bounding box, remove table/background
-- Downsample to 1024 points via FPS (with a 20k-point random pre-sample for speed)
-- Store point clouds in zarr as `data/point_cloud (N, 1024, 3)` float32
-- Add automated "move arm out of view" step before first point cloud capture
-- Add `--grasp-type` argument or interactive prompt for grasp type label
-- Reduce state/action from 30-dim to 23-dim (drop ee_pos, ee_quat)
+### Phase 1: Point Cloud Data Collection Pipeline — COMPLETE
+- ✅ Multi-camera PC fusion (4 cameras → world frame → workspace crop → FPS → 1024 pts)
+- ✅ 23-dim state/action (dropped ee_pos/ee_quat)
+- ✅ `--grasp-type` and `--point-cloud` flags in collect_data.py
+- ✅ Auto-park IPC protocol for clean PC capture (arm out of camera view)
+- ✅ `point_cloud` + `grasp_type_id` stored in zarr
 
-**Changes to episode_storage.py:**
-- Add `point_cloud` dataset to zarr structure
-- Add `grasp_type_id` integer metadata alongside string label
+### Phase 2: Point Cloud Policy Architecture — COMPLETE
+- ✅ PointNet encoder (3→64→128→256, max pool, proj→256-d)
+- ✅ GraspTypeEncoder (one-hot→MLP→64-d)
+- ✅ PointCloudObservationEncoder (PointNet + State + GraspType → 512-d)
+- ✅ Min-max normalization to [-1, 1]
+- ✅ `--no-grasp-conditioning` ablation flag (drops GraspTypeEncoder branch)
 
-### Phase 2: Point Cloud Policy Architecture
-**Changes to train.py:**
-- Replace VisionEncoder (ResNet-18) with PointNet encoder
-- Add grasp type conditioning (one-hot embedding → MLP → concat with obs)
-- Switch to min-max normalization (following DP3)
-- Adjust obs_encoder to handle point clouds instead of images
-- Keep the 1D temporal U-Net noise network (same as current)
+### Phase 3: Data Collection — COMPLETE
+- ✅ 200 episodes: 50 jug + 50 crimp + 50 sloper + 50 pinch
+- ✅ All marked good quality, 29,647 total timesteps
+- ⏳ Held-out test hold (hold 4, test_edge) not yet collected
 
-### Phase 3: Data Collection
-- Collect 50-80 good demos per hold, 12-20 holds total
-- Varied positions and orientations per hold
-- Label each episode with grasp type
-
-### Phase 4: Training and Evaluation
-- Train on training holds, evaluate on held-out test_edge
-- Run ablation experiments
-- Compare against RGB baseline (current pipeline)
+### Phase 4: Training and Evaluation — IN PROGRESS
+- ⏳ Train Model A (with taxonomy) — ~11 hours on local RTX 2080 Ti
+- ⏳ Train Model B (without taxonomy, ablation) — ~11 hours
+- ⏳ Robot evaluation: 20+ trials × 4 grasp types × 2 models = 160+ trials
+- ⏳ RGB baseline comparison (legacy zarrs preserved)
 
 ## 5. Two-Part Research Architecture (Updated 2026-03-16)
 
@@ -305,7 +322,7 @@ The project is now explicitly decomposed into two independent research component
 ### Part 2: Grasp Execution Policy (Diffusion Policy)
 **Goal:** Given a grasp type label + point cloud observation + robot state, execute the correct grasp.
 
-This is the existing DP3-style pipeline. Grasp type is provided as conditioning — either from Part 1 at deployment, or manually labeled during data collection and training. The existing data collection workflow and all 37 collected episodes remain valid.
+This is the existing DP3-style pipeline. Grasp type is provided as conditioning — either from Part 1 at deployment, or manually labeled during data collection and training. 200 episodes collected across all 4 grasp types.
 
 **Key design decision:** Grasp type is provided as input (not predicted from the point cloud), keeping the policy's job focused on *how* to grasp rather than *what* grasp to use.
 
@@ -323,12 +340,13 @@ This is the existing DP3-style pipeline. Grasp type is provided as conditioning 
 
 ## 7. Timeline
 
-| Week | Task |
-|------|------|
-| 1 | Update data collection pipeline for point clouds |
-| 2 | Collect pilot data (1 hold, 50 demos), validate pipeline |
-| 3 | Implement PointNet encoder + grasp type conditioning in train.py |
-| 4 | Train pilot model, debug, iterate |
-| 5-7 | Full data collection across all holds |
-| 8-9 | Full training + ablation experiments |
-| 10 | Write paper, prepare benchmark release |
+| Week | Task | Status |
+|------|------|--------|
+| 1 | Update data collection pipeline for point clouds | ✅ Done |
+| 2 | Collect pilot data (1 hold, 50 demos), validate pipeline | ✅ Done |
+| 3 | Implement PointNet encoder + grasp type conditioning in train.py | ✅ Done |
+| 4 | Train pilot model, debug, iterate | ✅ Done |
+| 5-7 | Full data collection across all holds (200 episodes) | ✅ Done (2026-04-14) |
+| 8 | Train both models (with/without taxonomy, ~11h each) | ⏳ Next |
+| 9 | Robot evaluation (160+ trials) + statistical analysis | ⏳ |
+| 10 | Write paper, prepare benchmark release | ⏳ |

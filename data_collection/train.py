@@ -741,9 +741,11 @@ class PointCloudObservationEncoder(nn.Module):
     """
 
     def __init__(self, state_dim, obs_horizon, pc_dim=256, state_mlp_dim=128,
-                 grasp_dim=64, n_grasp_types=N_GRASP_TYPES):
+                 grasp_dim=64, n_grasp_types=N_GRASP_TYPES,
+                 use_grasp_conditioning=True):
         super().__init__()
         self.obs_horizon = obs_horizon
+        self.use_grasp_conditioning = use_grasp_conditioning
         self.pc_encoder = PointNetEncoder(out_dim=pc_dim)
         self.state_mlp = nn.Sequential(
             nn.Linear(state_dim * obs_horizon, 256),
@@ -751,9 +753,14 @@ class PointCloudObservationEncoder(nn.Module):
             nn.Linear(256, state_mlp_dim),
             nn.ReLU(),
         )
-        self.grasp_encoder = GraspTypeEncoder(n_grasp_types, grasp_dim)
 
-        fuse_in = pc_dim + state_mlp_dim + grasp_dim
+        if use_grasp_conditioning:
+            self.grasp_encoder = GraspTypeEncoder(n_grasp_types, grasp_dim)
+            fuse_in = pc_dim + state_mlp_dim + grasp_dim
+        else:
+            self.grasp_encoder = None
+            fuse_in = pc_dim + state_mlp_dim
+
         self.fuse = nn.Sequential(
             nn.Linear(fuse_in, 512),
             nn.ReLU(),
@@ -764,14 +771,17 @@ class PointCloudObservationEncoder(nn.Module):
         """
         obs_state:     (B, T_o, state_dim)
         obs_pc:        (B, N, 3)           — latest-timestep point cloud
-        grasp_type_id: (B,)                — long
+        grasp_type_id: (B,)                — long (ignored if use_grasp_conditioning=False)
         """
         B = obs_state.shape[0]
         pc_feat = self.pc_encoder(obs_pc)             # (B, 256)
         state_flat = obs_state.reshape(B, -1)
         state_feat = self.state_mlp(state_flat)       # (B, 128)
-        grasp_feat = self.grasp_encoder(grasp_type_id)  # (B, 64)
-        return self.fuse(torch.cat([pc_feat, state_feat, grasp_feat], dim=-1))
+        if self.use_grasp_conditioning:
+            grasp_feat = self.grasp_encoder(grasp_type_id)  # (B, 64)
+            return self.fuse(torch.cat([pc_feat, state_feat, grasp_feat], dim=-1))
+        else:
+            return self.fuse(torch.cat([pc_feat, state_feat], dim=-1))
 
 
 # ===========================================================================
@@ -913,7 +923,7 @@ class PointCloudDiffusionPolicy(nn.Module):
 
     def __init__(self, state_dim, action_dim, obs_horizon=2, pred_horizon=16,
                  num_diffusion_steps=100, down_dims=(256, 512, 1024),
-                 n_grasp_types=N_GRASP_TYPES):
+                 n_grasp_types=N_GRASP_TYPES, use_grasp_conditioning=True):
         super().__init__()
         self.obs_horizon = obs_horizon
         self.pred_horizon = pred_horizon
@@ -922,7 +932,8 @@ class PointCloudDiffusionPolicy(nn.Module):
 
         self.obs_encoder = PointCloudObservationEncoder(
             state_dim=state_dim, obs_horizon=obs_horizon,
-            n_grasp_types=n_grasp_types)
+            n_grasp_types=n_grasp_types,
+            use_grasp_conditioning=use_grasp_conditioning)
         self.noise_net = ConditionalUnet1D(
             action_dim=action_dim,
             cond_dim=self.obs_encoder.out_dim,
@@ -1023,7 +1034,10 @@ def train(args):
     else:
         down_dims = (256, 512, 1024)
 
+    use_grasp_cond = use_pc and not getattr(args, 'no_grasp_conditioning', False)
     if use_pc:
+        if not use_grasp_cond:
+            print("  *** ABLATION: grasp type conditioning DISABLED ***")
         policy = PointCloudDiffusionPolicy(
             state_dim=dataset.state_dim,
             action_dim=dataset.action_dim,
@@ -1031,6 +1045,7 @@ def train(args):
             pred_horizon=args.pred_horizon,
             num_diffusion_steps=args.diffusion_steps,
             down_dims=down_dims,
+            use_grasp_conditioning=use_grasp_cond,
         ).to(device)
     else:
         n_cams = len(dataset.cam_names)
@@ -1221,6 +1236,7 @@ def train(args):
                     "diffusion_steps": args.diffusion_steps,
                     "down_dims": list(down_dims),
                     "n_grasp_types": N_GRASP_TYPES,
+                    "use_grasp_conditioning": use_grasp_cond,
                 }
             else:
                 ckpt_config = {
@@ -1295,6 +1311,9 @@ def main():
                         help="Use point cloud mode (DP3-style): PointNet encoder + "
                              "grasp type conditioning + min-max normalization. "
                              "Requires data collected with --point-cloud flag.")
+    parser.add_argument("--no-grasp-conditioning", action="store_true",
+                        help="Ablation: disable grasp type conditioning in PC mode. "
+                             "Drops the 64-d GraspTypeEncoder branch.")
     args = parser.parse_args()
 
     if args.quick:

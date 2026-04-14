@@ -60,23 +60,24 @@ print('Grasp type IDs:', z['meta/grasp_type_id'][:5], '...')
 
 Expected output:
 ```
-Episodes: 17
-Timesteps: 2937
-Point cloud shape: (2937, 1024, 3)
-Grasp type IDs: [3 3 3 3 3] ...
+Episodes: 200
+Timesteps: 29647
+Point cloud shape: (29647, 1024, 3)
+Grasp type IDs: [0 0 0 0 0] ...
 ```
 
-(grasp_type_id=3 is jug — this is a jug-only pilot dataset on hold 0, clean PC with z_min=0.006)
+(200 episodes: 50 crimp + 50 sloper + 50 pinch + 50 jug, clean PC with z_min=0.006)
 
 ### 4. Run training
 
+**Model A — with grasp taxonomy conditioning:**
 ```bash
 cd data_collection
 
 python3 train.py \
     --point-cloud \
     --zarr ../datasets/climbing_holds.zarr \
-    --ckpt-dir ../checkpoints/pc_pilot \
+    --ckpt-dir ../checkpoints/pc_with_taxonomy \
     --epochs 3000 \
     --batch 128 \
     --augment \
@@ -84,8 +85,22 @@ python3 train.py \
     --save-every 100
 ```
 
-Training writes to `../checkpoints/pc_pilot/`:
-- `best.pt` — EMA weights with lowest validation loss (use this for evaluation)
+**Model B — ablation without taxonomy (same data, no grasp type input):**
+```bash
+python3 train.py \
+    --point-cloud \
+    --no-grasp-conditioning \
+    --zarr ../datasets/climbing_holds.zarr \
+    --ckpt-dir ../checkpoints/pc_no_taxonomy \
+    --epochs 3000 \
+    --batch 128 \
+    --augment \
+    --good-only \
+    --save-every 100
+```
+
+Training writes to the checkpoint directory:
+- `best.pt` — EMA weights with lowest training loss (use this for evaluation)
 - `epoch_XXXX.pt` — periodic snapshots
 - `norm_stats.json` — min-max normalization stats (required by evaluate.py)
 - `training_status.md` — live progress updated every 10 epochs
@@ -93,7 +108,7 @@ Training writes to `../checkpoints/pc_pilot/`:
 ### 5. Monitor training
 
 ```bash
-cat ../checkpoints/pc_pilot/training_status.md
+cat ../checkpoints/pc_with_taxonomy/training_status.md
 ```
 
 ---
@@ -106,7 +121,7 @@ cat ../checkpoints/pc_pilot/training_status.md
 | PointNet output | 256-d |
 | Grasp type conditioning | one-hot(4) → MLP → 64-d, fused with observation |
 | Conditioning vector | 512-d (PointNet 256 + State 128 + GraspType 64 + MLP) |
-| U-Net dims | (512, 1024, 2048) |
+| U-Net dims | (256, 512, 1024) |
 | Optimizer | AdamW, lr=1e-4 |
 | LR schedule | 500-step cosine warmup |
 | EMA | Power-law warmup (power=0.75) |
@@ -117,7 +132,7 @@ cat ../checkpoints/pc_pilot/training_status.md
 | Action horizon | 8 timesteps |
 | Action dim | 23 (7 arm joints + 16 hand joints) |
 | Point cloud | 1024 pts, XYZ only, world frame, FPS downsampled |
-| Dataset | 17 episodes, 2937 timesteps, hold 0 (jug) — clean pilot (z_min=0.006) |
+| Dataset | 200 episodes (50 per grasp type), 29647 timesteps, 4 holds — clean PC (z_min=0.006) |
 
 ---
 
@@ -138,22 +153,26 @@ Grasp type IDs: `0=crimp, 1=sloper, 2=pinch, 3=jug`
 
 ---
 
-## Copying Checkpoints Back
+## Evaluation
 
-After training, copy the checkpoint back to the robot machine for evaluation:
-
-```bash
-scp -r checkpoints/pc_pilot/ user@robot-machine:/path/to/tele/checkpoints/pc_pilot/
-```
-
-Then on the robot machine:
+Run on the robot machine (or same machine if training locally):
 
 ```bash
 source ~/franka/bin/activate
 source ~/frankapy/catkin_ws/devel/setup.bash
 cd ~/Desktop/tele/data_collection
-python3 evaluate.py --checkpoint ../checkpoints/pc_pilot/best.pt --hold 0 --grasp-type jug
+
+# With taxonomy
+python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy/best.pt \
+    --hold 0 --grasp-type jug
+
+# Without taxonomy (ablation)
+python3 evaluate.py --checkpoint ../checkpoints/pc_no_taxonomy/best.pt \
+    --hold 0 --grasp-type jug
 ```
+
+Run **20+ trials per grasp type per model** (160+ total). Record grasp success,
+type correctness, and hold stability per trial for statistical analysis.
 
 ---
 

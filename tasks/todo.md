@@ -1,68 +1,126 @@
 # TODO
 
-## Current State (2026-03-26)
+## Current State (2026-04-14)
 
 - ✅ Point cloud pipeline implemented end-to-end
 - ✅ Workspace bounds calibrated: `z_min=0.006` verified with `check_pc_sensitivity.py`
-- ✅ Trained model uploaded to HuggingFace: `rlogh/climbing-holds-diffusion-policy`
-  - Downloaded to `checkpoints/hf_model/best.pt` + `norm_stats.json`, ready to eval
-  - Config: encoder_type=point_cloud, state/action_dim=23, obs_horizon=2, pred_horizon=16
-- ✅ Arrow key thumb joint tuning added to data collection (up/down=nudge, left/right=cycle joints)
-  - MCP_Flex starts at +0.9 rad offset to clear hardware clip from -1.3 post-scale offset
-- ✅ **Thumb IK test file created**: `TeleoperationUnity/LEAP/leaphandv1/for_transfer/leap_thumb_ik_test.py`
-  - Drop-in replacement for `leap_pip_dip_teleop.py`; only thumb handling differs
-  - Index/Middle/Pinky: identical joint-angle pipeline to the original
-  - Thumb: ThumbFK (OVR bone quaternions → 3D positions) + BeaVR-style coord transform + PyBullet IK
-  - Uses LEAP URDF from `beavr-bot-reference/assets/urdf/leap_hand/leap_hand_right.urdf`
-  - `pybullet` installed in `~/franka` venv (3.2.7)
-  - Reads thumb bone quaternions from values 16-27 in the 28-value UDP packet (previously discarded)
-  - Key constants marked `# TUNE` at top of file; prints FK/IK diagnostics every 100 frames
-- ✅ `beavr-bot-reference/` cloned and gitignored — does not affect git push
-- ⏳ **Thumb IK test NOT yet run on hardware** — needs live Quest + LEAP session to tune constants
+- ✅ **200 episodes collected** — 50 per grasp type, all marked good quality
+  - Hold 0 (edge_A): 50 jug episodes
+  - Hold 1 (edge_B): 50 crimp episodes
+  - Hold 2 (sloper): 50 sloper episodes
+  - Hold 3 (pinch): 50 pinch episodes
+- ✅ `--no-grasp-conditioning` flag implemented in train.py (ablation-ready)
+- ✅ Per-grasp LEAP hand offsets saved in memory (jug, sloper, pinch, crimp)
+- ✅ DIP/PIP max clamp added to `leap_pip_dip_teleop.py`
+- ✅ Verified training fits on local RTX 2080 Ti (0.8 GB VRAM, ~11 hours for 3000 epochs)
 
 ---
 
 ## Immediate Next Steps
 
-1. **Test Thumb IK** — run `leap_thumb_ik_test.py` in a live session to tune FK constants
+1. **Train Model A — WITH taxonomy** (on this machine)
    ```bash
-   cd ~/Desktop/tele/TeleoperationUnity/LEAP/leaphandv1/for_transfer
-   python3 leap_thumb_ik_test.py
-   ```
-   - Watch the `[THUMB IK DBG]` printouts (every 100 frames) to see FK positions and IK results
-   - If thumb motion looks geometrically wrong, adjust in order:
-     1. `THUMB_BONE_AXIS` — try `[1,0,0]` or `[0,0,1]` if `[0,1,0]` is wrong
-     2. `THUMB_BASE_POS` — shift until rest-pose FK puts the thumb tip ~12 cm from wrist
-     3. `THUMB_BONE_LENS` — scale up/down uniformly if the reach is too short/long
-     4. `THUMB_XY_ROT` / `THUMB_Y_ROT` — adjust if thumb IK targets land in the wrong sector
-   - Goal: thumb motion should be smoother and more anatomically correct than `leap_pip_dip_teleop.py`
-   - Once tuned, promote constants into `leap_pip_dip_teleop.py` (or replace it outright)
-
-3. **Recollect 50 jug episodes on hold 0 (edge_A)**
-   ```bash
-   python3 collect_data.py --hold 0 --point-cloud --grasp-type jug
-   ```
-   - Pre-flight check: run `check_pc_sensitivity.py` once to confirm PC looks correct before wasting recording time
-   - Verify Z centroid > 0.01 m and centroids shift when hold is moved
-
-4. **Upload new dataset to HuggingFace** and retrain on cluster
-   ```bash
-   python3 train.py --point-cloud --epochs 5000 --batch 128 --augment --good-only \
-       --zarr ../datasets/climbing_holds.zarr --ckpt-dir ../checkpoints/pc_v2
+   cd ~/Desktop/tele/data_collection
+   python3 train.py --point-cloud --epochs 3000 --batch 128 --augment --good-only \
+       --zarr ../datasets/climbing_holds.zarr --ckpt-dir ../checkpoints/pc_with_taxonomy \
+       --save-every 100
    ```
 
-5. **Pilot Eval** — Test new checkpoint on robot
+2. **Train Model B — WITHOUT taxonomy** (ablation, on this machine)
    ```bash
-   python3 evaluate.py --checkpoint ../checkpoints/pc_v2/best.pt --hold 0 --grasp-type jug
+   cd ~/Desktop/tele/data_collection
+   python3 train.py --point-cloud --no-grasp-conditioning --epochs 3000 --batch 128 \
+       --augment --good-only --zarr ../datasets/climbing_holds.zarr \
+       --ckpt-dir ../checkpoints/pc_no_taxonomy --save-every 100
    ```
-   - Run 2 trials: one with `--zero-pc`, one normal. Actions MUST differ — if identical, PC is still broken.
 
-6. **Data Collection — Holds 1–3** — 50 good episodes each (only after hold 0 eval passes)
-   - Hold 1 (edge_B, crimp): `python3 collect_data.py --hold 1 --point-cloud --grasp-type crimp`
-   - Hold 2 (sloper): `python3 collect_data.py --hold 2 --point-cloud --grasp-type sloper`
-   - Hold 3 (pinch): `python3 collect_data.py --hold 3 --point-cloud --grasp-type pinch`
+3. **Evaluate BOTH models on robot** — 20+ trials per grasp type per model (160+ total)
+   ```bash
+   # With taxonomy
+   python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy/best.pt \
+       --hold 0 --grasp-type jug
 
-7. **Full Training** — Retrain on all holds once data is collected
+   # Without taxonomy (still needs --grasp-type for the hold setup, but model ignores it)
+   python3 evaluate.py --checkpoint ../checkpoints/pc_no_taxonomy/best.pt \
+       --hold 0 --grasp-type jug
+   ```
+   Record per-trial: grasp success (0/1), grasp type correctness, hold stability, contact time.
+
+4. **Build results table and figures** — see RESEARCH_PLAN.md §3 Evaluation Metrics
+
+5. **Upload dataset to HuggingFace** (for reproducibility / cluster backup)
+   ```bash
+   huggingface-cli upload rlogh/climbing-holds-pointcloud \
+       ./datasets/climbing_holds.zarr --repo-type dataset
+   ```
+
+---
+
+## Training Parameter Audit (2026-04-14)
+
+All parameters verified against DP3 (Ze et al., RSS 2024), original Diffusion Policy
+(Chi et al., RSS 2023), and DexCap (Wang et al., RSS 2024).
+
+| Parameter | Value | Source / Justification |
+|-----------|-------|----------------------|
+| obs_horizon | 2 | Chi et al. 2023, DP3 — standard for diffusion policy |
+| pred_horizon | 16 | Chi et al. 2023 — standard for CNN-based DP |
+| action_horizon | 8 | Chi et al. 2023 — execute 8 of 16 predicted steps, then re-plan |
+| diffusion_steps | 100 (train), 10 DDIM (inference) | DP3, Chi et al. — standard |
+| batch_size | 128 | DP3 — fits in 0.8 GB VRAM on RTX 2080 Ti |
+| learning_rate | 1e-4 | DP3, Chi et al. — standard for AdamW |
+| AdamW betas | (0.95, 0.999) | DP3 — β1=0.95 is standard for diffusion models |
+| weight_decay | 1e-6 | Standard — minimal regularization |
+| grad_clip | 1.0 | Standard for diffusion training — prevents exploding gradients |
+| warmup | 500 steps | DP3 — linear warmup before cosine decay |
+| LR schedule | cosine decay after warmup | Standard |
+| EMA power | 0.75 | Power-law warmup EMA, matches reference implementations |
+| EMA max | 0.9999 | Standard |
+| epochs | 3000 | DP3 — sufficient for convergence on ~200 episodes |
+| PointNet dims | 3→64→128→256→proj(256) | Simplified PointNet (no T-Net, sufficient for fixed-frame PCs) |
+| U-Net down_dims | (256, 512, 1024) | Chi et al. 2023 — standard for original DP |
+| normalization | min-max to [-1, 1] | DP3 recommendation for point cloud mode |
+| PC augmentation | jitter σ=0.002 + 5% dropout | DP3 uses σ=0.002; dropout is standard |
+| n_points | 1024 | DP3 default |
+| grasp_type_dim | 64-d (one-hot→MLP) | Our design — 64-d is sufficient for 4-class embedding |
+
+**Note on U-Net dims:** README says (512, 1024, 2048) but code uses (256, 512, 1024).
+The smaller dims match Chi et al. 2023 and are appropriate for 200 episodes — the larger
+dims risk overfitting on this dataset size. Scale up if dataset grows to 500+ episodes.
+
+**Note on validation:** No train/val split — best.pt saved on lowest training loss.
+This matches DP3 and Chi et al. Real validation is on-robot success rate.
+Training loss should decrease smoothly; a spike/plateau after initial decrease
+could indicate learning rate issues.
+
+---
+
+## Evaluation Protocol (2026-04-14)
+
+### Per-trial recording
+For EVERY evaluation trial, record:
+1. **Grasp success** — binary: did the hand achieve stable contact? (0/1)
+2. **Grasp type correctness** — did the hand form the correct grip shape? (0/1)
+3. **Hold stability** — can the grasp sustain a gentle tug? (0/1)
+4. **Contact time** — seconds from episode start to first contact
+5. **Point cloud used** — save the PC for post-hoc analysis
+
+### Trial counts
+- Per model × per grasp type: **minimum 20 trials** (ideally 30)
+- Total: 2 models × 4 grasp types × 20 trials = **160 trials minimum**
+- Held-out test hold (hold 4, test_edge): 20 trials per model = 40 more
+
+### Statistical analysis
+- Report success rates with **95% confidence intervals** (Wilson score)
+- Use **Fisher's exact test** for pairwise comparisons (p < 0.05 = significant)
+- Primary figure of merit: **Δ success rate** (taxonomy model − no-taxonomy model)
+
+### Key figures to generate
+1. **Bar chart**: success rate per grasp type, two bars per type (with/without taxonomy)
+2. **Training curves**: loss vs epoch for both models on same plot
+3. **Point cloud visualizations**: example PCs for each hold type
+4. **Architecture diagram**: PointNet + State + GraspType → Fuse → U-Net
+5. **Novelty gap table**: our method vs DP3, Dexonomy, etc. across 4 axes
 
 ---
 
@@ -71,38 +129,13 @@
 **Goal:** VLM-based classifier that predicts grasp type from an RGB image of a hold.
 **Status:** Not started. Existing Part 2 data unaffected — this is fully independent.
 
-Steps:
-1. **Benchmark zero-shot first** — prompt GPT-4V or Claude with the 4 hold types on a handful of test images. If >90%, ship it.
-2. **If fine-tuning needed:** Scrape labeled images from gear sites / Kilter Board / Moonboard (jug/sloper/crimp/pinch are standard terms). Add 20-50 in-lab photos per class from RealSense.
-3. **Fine-tune CLIP or lightweight VLM** on the combined dataset.
-4. **Integration:** At deployment, pipe RGB snapshot of hold → Part 1 → grasp_type label → Part 2 (diffusion policy conditioning).
-
-Note: In-lab photo collection requires no robot or zarr — just place hold, take picture, label.
-
 ---
 
 ## Part 2 Ablations
 
-**⚠️ The with/without grasp type conditioning ablation is load-bearing for the CoRL paper.**
-If conditioning doesn't improve success rate, the main technical claim collapses.
-`--no-grasp-conditioning` flag does NOT exist yet in train.py — must be added before running this ablation.
-The ablation is simply: same model, same dataset, same hyperparams — just drop the 64-d grasp type embedding branch.
-
-   - [ ] Add `--no-grasp-conditioning` flag to train.py (drops GraspTypeEncoder branch, concat dim 384 instead of 448)
-   - [ ] Train unconditioned model on full mixed-grasp-type dataset
-   - [ ] Evaluate both models per grasp type on robot → build comparison table
-   - [ ] Point cloud vs RGB (ResNet baseline — legacy zarrs preserved for this)
-   - [ ] 1024 vs 512 vs 2048 points
-   - [ ] Effect of number of demonstrations
-
-## CoRL Paper — Key Action Items (2026-03-20)
-
-- [ ] Verify current cluster training runs cover the ablation sweep (what configs are running?)
-- [ ] Add `--no-grasp-conditioning` to train.py
-- [x] Add Dexonomy, OmniDexVLG, DexGraspVLA, Grasp as You Say, UniDexFPM, GenDP, CrossDex to related work (2026-04-01)
-- [x] Prepare 2-sentence differentiator from Dexonomy (pose gen vs execution policy) — now in §2.3 (2026-04-01)
-- [x] Add novelty gap table (Table 1) — 5-method comparison across 4 axes (2026-04-01)
-- [x] Fix reference venues: DexCap → RSS 2024, iDP3 → CoRL 2024, DexDiffuser → RA-L (2026-04-01)
-- [x] Add two-part deployment architecture paragraph to Discussion §6 (2026-04-01)
-- [ ] ⚠️ Fill in FIXME author fields in references.bib for 7 new entries (see IMPLEMENTATION_LOG Session 4)
-- [ ] Run Part 1 VLM zero-shot benchmark (GPT-4V or Claude on 4-class hold classification)
+- [x] Add `--no-grasp-conditioning` flag to train.py (2026-04-14)
+- [ ] Train with-taxonomy model (3000 epochs, ~11 hours)
+- [ ] Train without-taxonomy model (3000 epochs, ~11 hours)
+- [ ] Evaluate both models per grasp type on robot → build comparison table
+- [ ] Point cloud vs RGB (ResNet baseline — legacy zarrs preserved for this)
+- [ ] 1024 vs 512 vs 2048 points (if time permits)

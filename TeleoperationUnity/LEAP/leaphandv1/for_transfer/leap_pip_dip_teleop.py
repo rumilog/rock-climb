@@ -18,9 +18,6 @@ import time
 import sys
 import signal
 import threading
-import tty
-import termios
-import select
 from datetime import datetime
 
 # Add the LEAP hand API to the path
@@ -94,35 +91,39 @@ class LeapPipDipTeleop:
         self.mcp_abd_scale = 1.0
         # Per-finger multipliers [Index, Middle, Pinky, Thumb]
         # Note: these multiply with the global scales above (e.g. pip_scale * pip_scale_per_finger)
-        self.pip_scale_per_finger = [1.2, 1.3, 0.7, 1.7]
-        self.dip_scale_per_finger = [1.5, 1.4, 1.0, 1.8]
-        self.mcp_flex_scale_per_finger = [0.8, 0.8, 0.8, 5]
-        self.mcp_abd_scale_per_finger = [1.4, 1.2, 1.4, 5]
+        self.pip_scale_per_finger = [1.2, 3, 3, 1]
+        self.dip_scale_per_finger = [1.5, 1.6, 2, 1]
+        self.mcp_flex_scale_per_finger = [0.1, 0.1, 0.1, 5]
+        self.mcp_abd_scale_per_finger = [1.2, 1.2, 1.4, 5]
         # Per-finger zero-offsets (degrees) to treat measured straight/neutral as 0
         # Set to the EXACT measured value when the joint is straight (can be negative!)
         # For example, if "straight" measures -20°, set offset to -20.0
         # Order: [Index, Middle, Pinky, Thumb]
-        self.dip_zero_offset_deg_per_finger = [0.0, 0.0, 15.0, 50.0]
-        self.pip_zero_offset_deg_per_finger = [0.0, 0.0, 25.0, 40.0]
-        self.mcp_flex_zero_offset_deg_per_finger = [0.0, 0.0, 0.0, 40.0]
-        self.mcp_abd_zero_offset_deg_per_finger = [10.0, 0.0, -10.0, 30.0]
+        self.dip_zero_offset_deg_per_finger = [0.0, 0.0, 15.0, 40.0]
+        self.pip_zero_offset_deg_per_finger = [0.0, 0.0, 25.0, 50.0]
+        self.mcp_flex_zero_offset_deg_per_finger = [90.0, 0.0, 0.0, 80.0]
+        self.mcp_abd_zero_offset_deg_per_finger = [0.0, 0.0, 0.0, 30.0]
 
         # Post-scaling offsets (in RADIANS) - applied AFTER conversion and scaling
         # Simple addition/subtraction to final motor commands for fine-tuning
         # Order: [Index, Middle, Pinky, Thumb]
-        self.dip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
+        self.dip_post_scale_offset_rad_per_finger = [1.57, 1.57, 1.57, 0.0]
         self.pip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.3]
         self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
         self.mcp_abd_post_scale_offset_rad_per_finger = [0.0, 0.1, 0.2, -0.2]
 
-        # Thumb joint tuning (arrow keys)
-        # Joints: 0=MCP_Abd(12), 1=MCP_Flex(13), 2=PIP(14), 3=DIP(15)
-        self.thumb_joint_names = ["MCP_Abd", "MCP_Flex", "PIP", "DIP"]
-        self.thumb_selected = 1          # start on MCP_Flex
-        # MCP_Flex (index 1) starts at +0.9 to clear the -1.3 post-scale offset
-        # that otherwise pins it at the hardware clip minimum (-0.47 allegro).
+        # Max PIP closing angle (radians) per finger [Index, Middle, Pinky, Thumb]
+        # Use np.inf for no limit. ~1.57 rad = 90°, ~1.75 rad = 100°
+        self.pip_max_rad_per_finger = [1.57, 1.57, 1.57, np.inf]
+
+        # Max DIP closing angle (radians) per finger [Index, Middle, Pinky, Thumb]
+        # Use np.inf for no limit. ~1.57 rad = 90°, ~1.75 rad = 100°
+        self.dip_max_rad_per_finger = [1.57, 1.57, 1.57, np.inf]
+
+        # Thumb per-joint offsets (radians) [MCP_Abd, MCP_Flex, PIP, DIP]
+        # MCP_Flex starts at +0.9 to clear the post-scale offset that otherwise
+        # pins it at the hardware clip minimum.
         self.thumb_offsets = np.array([0.0, 0.9, 0.0, 0.0])
-        self.thumb_step = 0.05           # ~3° per keypress
 
     def init_leap_hand(self):
         """Initialize LEAP hand connection"""
@@ -296,7 +297,9 @@ class LeapPipDipTeleop:
             for f in range(4):
                 base = f * 4
                 vals_rad[base + 0] += self.dip_post_scale_offset_rad_per_finger[f]      # DIP
+                vals_rad[base + 0]  = min(vals_rad[base + 0], self.dip_max_rad_per_finger[f])  # DIP clamp
                 vals_rad[base + 1] += self.pip_post_scale_offset_rad_per_finger[f]      # PIP
+                vals_rad[base + 1]  = min(vals_rad[base + 1], self.pip_max_rad_per_finger[f])  # PIP clamp
                 vals_rad[base + 2] += self.mcp_flex_post_scale_offset_rad_per_finger[f] # MCP_Flex
                 vals_rad[base + 3] += self.mcp_abd_post_scale_offset_rad_per_finger[f] # MCP_Abd
             
@@ -476,46 +479,17 @@ class LeapPipDipTeleop:
             traceback.print_exc()
             return False
     
-    def _keyboard_thread(self):
-        """Read up/down arrow keys to adjust thumb abduction offset."""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            while self.running:
-                if select.select([sys.stdin], [], [], 0.05)[0]:
-                    ch = sys.stdin.read(1)
-                    if ch == '\x1b':
-                        seq = sys.stdin.read(2)
-                        if seq == '[A':   # Up arrow
-                            self.thumb_abd_offset += self.thumb_abd_step
-                        elif seq == '[B': # Down arrow
-                            self.thumb_abd_offset -= self.thumb_abd_step
-                        else:
-                            continue
-                        print(f"\r  [THUMB ABD] offset: {self.thumb_abd_offset:+.3f} rad "
-                              f"({np.degrees(self.thumb_abd_offset):+.1f}°)    ", flush=True)
-                    elif ch in ('\x03', 'q'):  # Ctrl+C or q
-                        self.running = False
-                        break
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
     def run_teleoperation(self):
         """Main teleoperation loop"""
         print("\n" + "="*60)
-        print("🚀 LEAP HAND TELEOPERATION")
+        print("LEAP HAND TELEOPERATION")
         print("="*60)
-        print("💡 Move your hand to control the LEAP hand")
-        print("📡 Receiving data from server_env.py (localhost:8002)")
-        print("⬆⬇  Up/Down arrows: adjust thumb abduction offset")
-        print("⚠️  Make sure server_env.py is running!")
-        print("⚠️  Press Ctrl+C or q to stop")
+        print("Move your hand to control the LEAP hand")
+        print("Receiving data from localhost:8002")
+        print("Press Ctrl+C or q to stop")
         print("="*60 + "\n")
 
         self.running = True
-        kb_thread = threading.Thread(target=self._keyboard_thread, daemon=True)
-        kb_thread.start()
         frame_count = 0
         last_print_time = time.time()
         
