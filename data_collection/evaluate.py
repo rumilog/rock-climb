@@ -105,6 +105,7 @@ def load_policy(ckpt_path, device):
             num_diffusion_steps=cfg["diffusion_steps"],
             down_dims=down_dims,
             n_grasp_types=cfg.get("n_grasp_types", N_GRASP_TYPES),
+            use_grasp_conditioning=cfg.get("use_grasp_conditioning", True),
         ).to(device)
     else:
         down_dims = tuple(cfg.get("down_dims", [512, 1024, 2048]))
@@ -171,6 +172,7 @@ class PolicyEvaluator:
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10, grasp_type=None, zero_pc=False):
         self.hold_id = hold_id
+        self.ckpt_name = Path(ckpt_path).parent.name  # e.g. "pc_with_taxonomy"
         self.n_trials = n_trials
         self.max_steps = max_steps
         self.action_horizon = action_horizon
@@ -229,7 +231,9 @@ class PolicyEvaluator:
         self._cam_extrinsics = None
 
     def _prompt_grasp_type(self):
-        print("\nPoint cloud mode requires grasp type. Select:")
+        uses_cond = self.cfg.get("use_grasp_conditioning", True)
+        label = "grasp type (fed to network)" if uses_cond else "grasp type (for logging — model ignores it)"
+        print(f"\nSelect {label}:")
         for gid, gname in GRASP_TYPE_NAMES.items():
             print(f"  {gid}: {gname}")
         while True:
@@ -732,6 +736,7 @@ class PolicyEvaluator:
             "aborted": aborted,
             "timestamp": datetime.now().isoformat(),
             "encoder_type": self.encoder_type,
+            "model": self.ckpt_name,
         }
         if self.use_pc:
             result["grasp_type"] = self.grasp_type
@@ -790,7 +795,7 @@ class PolicyEvaluator:
                 break
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = self.results_dir / f"eval_{ts}_hold{self.hold_id}.json"
+        out_path = self.results_dir / f"eval_{ts}_{self.ckpt_name}_hold{self.hold_id}.json"
         with open(out_path, "w") as f:
             json.dump(results, f, indent=2)
 

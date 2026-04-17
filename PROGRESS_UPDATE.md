@@ -27,7 +27,9 @@ We are building a **grasp-taxonomy-aware 3D diffusion policy** for dexterous cli
 | Point cloud fusion (4 cams → 1024 pts) | ✅ Calibrated |
 | Workspace bounds | ✅ Calibrated (empty table + hold verified) |
 | Training script (PointNet + grasp conditioning) | ✅ Implemented |
-| Evaluation script (real robot) | ✅ Implemented |
+| Evaluation script (real robot, single model) | ✅ Implemented |
+| Paired evaluation (WITH vs WITHOUT taxonomy, real robot) | ✅ Implemented (2026-04-17) |
+| Both policies trained (`pc_with_taxonomy`, `pc_no_taxonomy`) | ✅ Completed 2026-04-16 |
 
 ### Data Collection Progress
 
@@ -78,6 +80,20 @@ We are building a **grasp-taxonomy-aware 3D diffusion policy** for dexterous cli
    - Discussion §6 covers two-part deployment architecture (VLM classifier → diffusion policy)
    - **Outstanding:** 7 new bib entries have `FIXME` author placeholders — fill in before submission
 
+7. **Trained both ablation policies** (completed 2026-04-16)
+   - `checkpoints/pc_with_taxonomy/best.pt` — grasp-type-conditioned (our method)
+   - `checkpoints/pc_no_taxonomy/best.pt` — no-conditioning ablation (baseline)
+   - Identical architecture, data, training schedule except for the grasp-type encoder branch
+
+8. **Built paired evaluation tooling** (`data_collection/paired_eval.py`, 2026-04-17)
+   - Both models loaded once; every "pair" runs trial A + trial B on the same hold position so only model identity varies
+   - Coin-flip + strict global alternation controls for order bias (each model goes first 50% of the time per grasp type)
+   - Fresh point cloud captured **before each trial** (trial 1's hand contact nudges the hold a few mm; between-trial re-scan keeps the comparison faithful); per-trial centroid + point count logged, drift in mm printed per pair for post-hoc filtering
+   - Batched session model — one command evaluates all 4 grasp types in sequence (interactive / scripted / single-batch modes)
+   - Clean-quit button (`q` at any prompt) + incremental save after every pair + `--resume <json>` for seamless continuation across sittings; alternation parity + `completed_pairs` per batch are all restored on resume
+   - Reports Wilson 95% CIs + McNemar's paired test, overall and per grasp type
+   - **Smoke test (2 crimp pairs):** WITH 2/2, WITHOUT 0/2 — directionally promising but data-lost to a first-version shutdown segfault (since fixed). Ready for full 80-pair session.
+
 ---
 
 ## 4. Two-Part Research Architecture
@@ -96,11 +112,11 @@ At deployment: Part 1 feeds its label into Part 2 as the conditioning signal.
 ## 5. Next Steps
 
 ### Part 2 (Grasp Policy) — Immediate
-1. ⏳ **Recollect hold 0 data** — 50 jug episodes with fixed z_min=0.006 pipeline
-2. **Upload to HuggingFace** and retrain on cluster
-3. **Pilot eval on robot** — verify model uses PC: `--zero-pc` vs normal must produce different actions
-4. **Collect data for holds 1–3** — crimp, sloper, pinch (50 each) — only after hold 0 eval confirms PC is used
-5. **Scale and ablations** — full dataset, compare with/without grasp conditioning, PC vs RGB baseline
+1. ✅ Data recollected with fixed z_min=0.006 pipeline (all 4 grasp types)
+2. ✅ Both policies trained on cluster: `pc_with_taxonomy`, `pc_no_taxonomy` (2026-04-16)
+3. ⏳ **Paired evaluation run** — 20 pairs × 4 grasp types = 80 pairs / 160 rollouts using `paired_eval.py`, supports mid-session quit + resume across sittings
+4. **Drift filtering + analysis** — drop pairs with PC centroid drift > ~15 mm (paired_eval logs this per pair), report Wilson CIs + McNemar p-values overall and per grasp type
+5. **Final ablations** — PC vs RGB baseline (if time permits); sensitivity to number of demos per grasp type
 
 ### Part 1 (Hold Identifier) — Future
 1. Benchmark zero-shot VLM on 4-class hold classification
@@ -114,5 +130,5 @@ At deployment: Part 1 feeds its label into Part 2 as the conditioning signal.
 - **Problem:** Dexterous grasping needs different hand configurations per object geometry; no prior work on grasp-type-conditioned diffusion policies for climbing holds.
 - **Two-part approach:** (1) VLM classifier identifies hold type from RGB image; (2) DP3-style point cloud policy executes the grasp conditioned on that type.
 - **Hardware:** Franka + LEAP Hand, 4× RealSense, VR teleoperation.
-- **Progress:** Full pipeline implemented and calibrated; workspace bounds verified (`z_min=0.006`); previous bad-PC dataset discarded; ready to recollect with correct pipeline.
-- **Next:** Recollect 50 jug episodes (hold 0) with fixed pipeline → retrain → verify model uses PC → collect holds 1–3 → scale → Part 1 VLM identifier.
+- **Progress:** Full pipeline implemented and calibrated; workspace bounds verified (`z_min=0.006`); data collected for all 4 grasp types; both ablation policies trained (`pc_with_taxonomy`, `pc_no_taxonomy`, 2026-04-16); paired evaluation tool built with mid-session save/resume (2026-04-17).
+- **Next:** Full 80-pair paired evaluation (20 pairs × 4 grasp types) — paired protocol controls for hold drift and order bias, reports per-grasp-type success rates + Wilson CIs + McNemar p-values → write up results → Part 1 VLM identifier.

@@ -70,6 +70,7 @@ source ~/frankapy/catkin_ws/devel/setup.bash
 | `data_collection/episode_storage.py` | COMPLETE | point_cloud zarr + grasp_type_id meta |
 | `data_collection/point_cloud_utils.py` | COMPLETE | NEW - PC processing utilities |
 | `data_collection/evaluate.py` | COMPLETE | PC policy loading, runtime capture, grasp type arg |
+| `data_collection/paired_eval.py` | COMPLETE (2026-04-17) | Side-by-side WITH-vs-WITHOUT-taxonomy evaluator: paired trials with shared hold position, per-trial PC capture, batched multi-grasp sessions, incremental save, clean `q` quit, `--resume` continuation, Wilson-CI + McNemar analysis (overall + per grasp type) |
 | `RESEARCH_PLAN.md` | CREATED | Full research plan with citations |
 | `IMPLEMENTATION_LOG.md` | UPDATED | This file |
 
@@ -160,6 +161,47 @@ evaluate.py --checkpoint old_best.pt
 
 **⚠️ ACTION REQUIRED before submission:** All 7 new bib entries have `FIXME: see arXiv:XXXXX` placeholder in the `author` field. Fill in real author lists from each arXiv page. CrossDex also needs its arXiv URL confirmed.
 
+### Session 5 (2026-04-17) — Paired Evaluation Tooling
+
+**File created:** `data_collection/paired_eval.py` (~1200 lines)
+
+**Motivation.** Both diffusion policies (`pc_with_taxonomy` and `pc_no_taxonomy`) finished training 2026-04-16. Evaluating them serially with per-model `evaluate.py` runs is biased: the physical hold drifts between a 20-trial WITH-only block and a 20-trial WITHOUT-only block, and within-run operator variation bleeds into only one model. We need both policies evaluated back-to-back on the SAME hold position per pair so only the model identity varies.
+
+**Design decisions (in roughly the order they were made):**
+
+1. **Paired protocol.** Both checkpoints loaded once. For each "pair" the script runs trial 1 with model A, prompts the operator, then runs trial 2 with model B. The first model of pair 1 is a coin-flip; every subsequent pair alternates strictly across the entire session so each model goes first exactly half the time per grasp type. This controls for both order bias and hand-on-hold fatigue.
+
+2. **Per-trial point cloud capture (not shared per pair).** Initial design captured one PC per pair and used it for both trials. First attempt at the real flow made clear that trial 1's hand contact always nudges the hold a few mm — trial 2's model would then be receiving a stale PC that doesn't match the actual scene. Changed to capture a fresh PC before each of the two trials; between trials the operator is prompted to re-align the hold, the arm parks, the 4 cameras re-capture, and the `centroid` + `n_valid` of each PC is logged. After the pair, the script prints the **centroid drift (mm)** between the two scans so high-drift pairs can be filtered out during analysis. Smoke test saw 28.9 mm and 57.4 mm drift across 2 crimp pairs — the 57 mm pair is a clear outlier worth dropping during final analysis.
+
+3. **Batched session model.** A single invocation can evaluate multiple grasp types (crimp, jug, sloper, pinch) in one session without restarting. Each "batch" fixes `(grasp_type, hold_id, n_pairs)`. Three run modes:
+   - `paired_eval.py` → interactive: prompts per batch for grasp_type / hold / n_pairs.
+   - `paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20` → scripted.
+   - `paired_eval.py --hold 1 --grasp-type crimp --pairs 10` → single-batch, backwards compatible.
+   Alternation parity spans the whole session (not per batch) so fairness holds globally.
+
+4. **Clean quit button.** First smoke test ran 2 crimp pairs cleanly, then hit Ctrl-C at the next batch's "Press Enter" prompt → `pyrealsense2` or `FrankaArm` C-extension segfaulted during teardown → the daemon thread that was supposed to write the JSON died before save ran → **2 completed pairs lost**. Fix: `QuitRequested` exception raised by `_wait_or_quit()` at any prompt if user types `q` / `quit`. In the signal and quit handlers, `_save_only()` runs SYNCHRONOUSLY in the main thread BEFORE any hardware teardown. Hardware teardown happens in a daemon thread with a 5-second `join` timeout; if it segfaults, `os._exit(0)` still fires and the JSON is already on disk. A `/tmp/paired_session_<ts>.json` fallback write is attempted if the primary path fails.
+
+5. **Incremental save.** `_save_only()` is called after every completed pair (not just at session end), overwriting `eval_results/paired_session_<session_id>.json` in place. Worst-case loss from any crash/interrupt/power-outage is a single in-progress pair.
+
+6. **Resume support.** `--resume <path>` restores:
+   - `session_id` (so the existing file is overwritten, no duplicates)
+   - `first_model` (so alternation parity continues: if pair 14 was `WITHOUT→WITH`, pair 15 will correctly be `WITH→WITHOUT`)
+   - `_all_pairs` and `_global_pair_idx`
+   - `planned_batches` from the original `--batches` spec — fully-completed batches get a `✓` marker and are skipped; partial ones resume at `completed_pairs + 1`
+   - `_batch_configs` with per-batch `completed_pairs` counter
+   
+   Re-invoking `--resume <file>` alone is enough — the saved plan is replayed.
+
+7. **Analysis.** Wilson 95% CI per model and McNemar's paired test (exact binomial for n_discordant < 10, continuity-corrected χ² otherwise), computed both overall and per grasp type. The no-taxonomy model still receives and logs `grasp_type` (the model ignores it internally) so its per-grasp-type performance is measurable.
+
+**Auto-park integration.** Reused the existing `/tmp/franka_park_*` IPC protocol (from `collect_data.py`) so the arm parks for PC capture without killing the FrankaArm `GotoPoseLive` skill. No changes to `VR_Teleoperation_Minimum.py` were needed for paired_eval, since paired_eval runs the policy directly (no VR teleop terminal involved during evaluation).
+
+**Smoke test (2026-04-17, 2 crimp pairs).** WITH taxonomy: 2/2, WITHOUT taxonomy: 0/2. Pattern held regardless of who went first. Centroid drifts: 28.9 mm (pair 1), 57.4 mm (pair 2 — above the ~15 mm drift threshold we'd want for clean apples-to-apples comparisons; may be dropped in final analysis). Data was lost to the segfault bug — motivated fix #4 above. Smoke test cannot be repeated until a full session is run with the fix in place.
+
+**Next step.** Real evaluation session: 20 pairs per grasp type × 4 grasp types = 80 pairs = ~160 rollouts. Expected operator time ~2.5 hours. The `q` quit + `--resume` workflow means this can be spread across multiple sittings.
+
+**Files also updated:** `tasks/todo.md` (workflow description), `tasks/lessons.md` (3 new entries: paired protocol motivation; per-trial PC capture; save-first-on-signal + resume design).
+
 ### Session 3 (2026-03-16) — Research Architecture Discussion
 - Clarified that 1024-pt XYZ point cloud is appropriate for the diffusion policy (trajectory planning) but marginal for classifying hold grasp type from shape alone (~30-150 points land on the hold itself).
 - Confirmed that the diffusion policy does NOT need to predict grasp type — it receives it as a conditioning label. Existing data collection workflow is correct and untouched.
@@ -210,4 +252,20 @@ python3 evaluate.py --checkpoint ../checkpoints/best.pt --hold 0 --grasp-type cr
 ### Evaluation (Legacy / Dry Run)
 ```bash
 python3 evaluate.py --checkpoint ../checkpoints/best.pt --hold 0 --dry-run
+```
+
+### Paired Evaluation — WITH vs WITHOUT taxonomy (NEW, 2026-04-17)
+```bash
+source ~/franka/bin/activate
+source ~/frankapy/catkin_ws/devel/setup.bash
+cd /home/rumi/Desktop/tele/data_collection
+
+# Interactive (prompts per batch). Type 'q' at any prompt to save+quit cleanly.
+python3 paired_eval.py
+
+# Scripted (20 pairs per grasp type, 80 pairs / 160 rollouts total)
+python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+
+# Resume an interrupted session (restores session_id, first_model, completed pairs, plan)
+python3 paired_eval.py --resume eval_results/paired_session_<timestamp>.json
 ```

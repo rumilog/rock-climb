@@ -243,6 +243,25 @@ DDPM 1D U-Net → action chunk (16 × 23-dim)
 - `--grasp-type` arg required for PC checkpoints (or interactive prompt)
 - **Inference speed:** default `--inference-steps 100` (full DDPM). For PC mode use `--inference-steps 10` (DDIM, per RESEARCH_PLAN recommendation) for faster 10 Hz execution
 
+### `paired_eval.py` (canonical tool for WITH-vs-WITHOUT-taxonomy comparison)
+
+Created 2026-04-17. Loads BOTH checkpoints once at startup, shares all robot hardware, and runs interlaced paired trials so both models see the same physical hold position per pair. This is the intended tool for the final comparison experiment (RESEARCH_PLAN §Ablations).
+
+Key design choices:
+
+- **Per-trial point cloud capture** — fresh PC is taken before each of the two trials in a pair (not once per pair). Trial 1's hand contact always nudges the hold a few mm; between-trial operator prompt + re-scan keeps the comparison faithful. Per-trial centroid + `n_valid` count are logged, and centroid drift (mm) is printed at pair end so outlier pairs can be filtered post-hoc.
+- **Strict alternation across all pairs** — pair 1's first model is a coin-flip; every subsequent pair (across all batches in the session) alternates, so each model starts first exactly half the time per grasp type. Alternation parity is preserved on resume.
+- **Batched session model** — a session consists of one or more batches, each fixing `(grasp_type, hold_id)` for N pairs. You can run 20 crimp, then 20 jug, then 20 sloper, then 20 pinch in a single invocation.
+- **Three modes:** interactive (prompt per batch), scripted (`--batches crimp:1:20,jug:0:20,...`), single-batch (`--hold 1 --grasp-type crimp --pairs 10`).
+- **Clean quit / save-and-walk-away** — type `q` + Enter at any "Press Enter ..." prompt (between pairs, between batches, or between the two trials of a pair). The script saves the session JSON synchronously (in the main thread, before any hardware teardown, so a pyrealsense/Franka exit segfault can never clobber it), tears down hardware in a daemon thread with 5 s timeout, prints the exact `--resume` command, and exits.
+- **Incremental save** — `_save_only()` is called after every completed pair, overwriting `eval_results/paired_session_<session_id>.json` in place. Worst-case data loss from any crash/interrupt is a single in-progress pair.
+- **`--resume <path>`** — restores `session_id` (to overwrite same file), `first_model` (to preserve alternation parity), per-batch `completed_pairs`, and the original `planned_batches` spec. Fully-completed batches are skipped, partial batches resume at `completed_pairs + 1`. Re-invoking `--resume` alone is enough — no need to repeat `--batches`.
+- **Analysis** — success rates + Wilson 95% CIs + McNemar's paired test, printed both overall and per grasp type. The no-taxonomy model still receives `grasp_type` in the JSON (ignored by the model internally) so its per-grasp-type performance is measurable.
+
+Saved JSON fields: `session_id`, `mode`, `first_model`, `planned_batches`, `batches` (each with `completed_pairs`), `pairs` (each with `grasp_type`, `hold_id`, `order`, `with_rating`, `no_rating`, `pc_stats`, `timestamp`), `last_saved`.
+
+Default checkpoints: `checkpoints/pc_with_taxonomy/best.pt` and `checkpoints/pc_no_taxonomy/best.pt`. Override with `--with-ckpt` / `--no-ckpt`.
+
 ---
 
 ## 7. Full Workflow
@@ -268,13 +287,33 @@ python3 train.py --point-cloud --epochs 3000 --batch 128 --augment --good-only \
     --zarr ../datasets/climbing_holds.zarr --ckpt-dir ../checkpoints/pc_v1
 ```
 
-### Evaluation (Point Cloud)
+### Evaluation (Point Cloud, single model)
 ```bash
 cd ~/Desktop/tele/data_collection
 python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
     --hold 0 --grasp-type crimp
 # --inference-steps defaults to 10 DDIM (correct for 10 Hz); use 100 only for offline comparison
 ```
+
+### Paired Evaluation (WITH vs WITHOUT taxonomy — the main comparison experiment)
+```bash
+cd ~/Desktop/tele/data_collection
+
+# Recommended: interactive mode — prompts for grasp_type/hold/pairs per batch
+python3 paired_eval.py
+
+# Or scripted, for a planned full session (20 pairs per hold = 80 total pairs, ~160 rollouts):
+python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+```
+
+During the run, type `q` + Enter at any "Press Enter ..." prompt to save and
+exit cleanly (no Ctrl-C needed). To continue later:
+```bash
+python3 paired_eval.py --resume eval_results/paired_session_<timestamp>.json
+```
+Alternation parity, completed batches, and planned batches are all restored
+so the resume is seamless. Every pair is saved incrementally, so any crash /
+power-loss at worst loses the single in-progress pair.
 
 ### Legacy Image Pipeline (still works)
 ```bash
@@ -319,6 +358,7 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
 6. **Image cache** in `datasets/img_cache/` — delete to force rebuild when dataset changes.
 7. **Quest 2 IP** — changes periodically on WiFi. Update `VR_Teleoperation_Minimum.py` lines 72/74.
 8. **PC mode inference speed** — default is 10 DDIM steps (correct for 10 Hz control). Only pass `--inference-steps 100` if doing offline quality comparison; it will miss the control loop timing on real hardware.
+9. **Process exit can segfault** — on this box, `pyrealsense2` and/or `FrankaArm` C-extension teardown occasionally segfaults during process exit (observed 2026-04-17 in paired_eval.py). Harmless as long as your script SAVES DATA BEFORE hardware teardown and uses `os._exit(0)` after a bounded-timeout cleanup thread. `paired_eval.py` follows this pattern and additionally incrementally-saves after every pair; `evaluate.py` (single-model, short runs) has not triggered it in practice. If you write new tools: save first, teardown second, never rely on `atexit` alone.
 
 ---
 

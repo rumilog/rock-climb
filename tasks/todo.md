@@ -35,15 +35,62 @@
    ```
 
 3. **Evaluate BOTH models on robot** — 20+ trials per grasp type per model (160+ total)
-   ```bash
-   # With taxonomy
-   python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy/best.pt \
-       --hold 0 --grasp-type jug
 
-   # Without taxonomy (still needs --grasp-type for the hold setup, but model ignores it)
-   python3 evaluate.py --checkpoint ../checkpoints/pc_no_taxonomy/best.pt \
-       --hold 0 --grasp-type jug
+   Both checkpoints finished training (2026-04-16). Use `paired_eval.py`
+   — one terminal command runs both models back-to-back on the SAME hold
+   position per pair, with a FRESH point cloud captured before each
+   trial (trial 1's hand contact always nudges the hold a few mm; the
+   between-trial reposition prompt + re-scan keeps the comparison
+   faithful). The first model of pair 1 is randomised; order strictly
+   alternates across every subsequent pair (across all batches) so each
+   model goes first half the time per grasp type.
+
+   **Interactive (recommended):** prompts for grasp_type / hold / n_pairs
+   before each batch, so you can swap between, say, 5 crimps → 5 jugs →
+   5 slopers → 5 pinches without restarting:
+
+   ```bash
+   cd ~/Desktop/tele/data_collection
+   python3 paired_eval.py
    ```
+
+   **Scripted (for planned sessions):**
+   ```bash
+   python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+   ```
+
+   **Single batch (backwards-compatible):**
+   ```bash
+   python3 paired_eval.py --hold 1 --grasp-type crimp --pairs 10
+   ```
+
+   **Clean quit / save-and-walk-away:** at any "Press Enter ..." prompt
+   (between pairs, between batches, or between trials in a pair), type
+   `q` + Enter instead of just Enter. The script saves, tears down
+   hardware, and prints the exact `--resume` command to continue later.
+   No Ctrl-C needed, no segfault risk.
+
+   **Resume:**
+   ```bash
+   python3 paired_eval.py --resume eval_results/paired_session_<ts>.json
+   ```
+   The script restores `session_id`, `first_model`, the completed-pair
+   history, and (for scripted runs) the original `--batches` plan. It
+   then skips already-complete batches and picks up partial batches at
+   the next pair. Alternation continues correctly — so if pair 14 is
+   `WITHOUT → WITH`, pair 15 after resume will be `WITH → WITHOUT`.
+
+   Every pair is saved **incrementally** (not just at end) with
+   `grasp_type`, `hold_id`, `order`, per-trial `pc_stats` (n_valid +
+   centroid), and both ratings to
+   `eval_results/paired_session_<timestamp>.json`. Worst-case data loss
+   from any crash/interrupt is a single in-progress pair. Each pair
+   prints its centroid drift (mm) between the two trials' PCs for
+   drift auditing. The no-taxonomy model receives `grasp_type` only for
+   internal logging (it ignores it), so its per-grasp-type performance
+   is still measurable. At the end the script prints success rates +
+   Wilson 95% CIs + McNemar p-values both overall and per grasp type.
+
    Record per-trial: grasp success (0/1), grasp type correctness, hold stability, contact time.
 
 4. **Build results table and figures** — see RESEARCH_PLAN.md §3 Evaluation Metrics
