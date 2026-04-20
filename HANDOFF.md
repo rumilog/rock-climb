@@ -242,6 +242,7 @@ DDPM 1D U-Net → action chunk (16 × 23-dim)
 - PC trial flow: arm out → SPACE → capture PC → arm back → SPACE → start policy
 - `--grasp-type` arg required for PC checkpoints (or interactive prompt)
 - **Inference speed:** default `--inference-steps 100` (full DDPM). For PC mode use `--inference-steps 10` (DDIM, per RESEARCH_PLAN recommendation) for faster 10 Hz execution
+- **Pull test** (`--pull-dist`, `--pull-angle`): after the rollout ends, arm executes a Cartesian displacement of `pull_dist` meters in the X,Y plane at `pull_angle` degrees. You then visually confirm whether the hold moved with the arm (`g`/`b`). If `--pull-angle` is not set, you are prompted for the angle before each pull. See CLAUDE.md "Pull test angle convention" for the coordinate diagram. Pull angle and distance are logged per trial in the result JSON.
 
 ### `paired_eval.py` (canonical tool for WITH-vs-WITHOUT-taxonomy comparison)
 
@@ -258,7 +259,9 @@ Key design choices:
 - **`--resume <path>`** — restores `session_id` (to overwrite same file), `first_model` (to preserve alternation parity), per-batch `completed_pairs`, and the original `planned_batches` spec. Fully-completed batches are skipped, partial batches resume at `completed_pairs + 1`. Re-invoking `--resume` alone is enough — no need to repeat `--batches`.
 - **Analysis** — success rates + Wilson 95% CIs + McNemar's paired test, printed both overall and per grasp type. The no-taxonomy model still receives `grasp_type` in the JSON (ignored by the model internally) so its per-grasp-type performance is measurable.
 
-Saved JSON fields: `session_id`, `mode`, `first_model`, `planned_batches`, `batches` (each with `completed_pairs`), `pairs` (each with `grasp_type`, `hold_id`, `order`, `with_rating`, `no_rating`, `pc_stats`, `timestamp`), `last_saved`.
+Saved JSON fields: `session_id`, `mode`, `first_model`, `planned_batches`, `batches` (each with `completed_pairs`), `pairs` (each with `grasp_type`, `hold_id`, `order`, `with_rating`, `no_rating`, `pc_stats` (including `pull_angle_deg` per trial if pull test was used), `pull_dist_m`, `timestamp`), `last_saved`.
+
+**Pull test** (`--pull-dist`, `--pull-angle`): same as evaluate.py. After each rollout the arm executes a Cartesian displacement; you visually confirm whether the hold moved (`g`/`b`). Prompted per trial if `--pull-angle` is omitted (recommended — holds rotate between trials). See CLAUDE.md "Pull test angle convention" for the coordinate diagram.
 
 Default checkpoints: `checkpoints/pc_with_taxonomy/best.pt` and `checkpoints/pc_no_taxonomy/best.pt`. Override with `--with-ckpt` / `--no-ckpt`.
 
@@ -293,6 +296,10 @@ cd ~/Desktop/tele/data_collection
 python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
     --hold 0 --grasp-type crimp
 # --inference-steps defaults to 10 DDIM (correct for 10 Hz); use 100 only for offline comparison
+
+# With disturbance rejection pull test (5 cm pull, angle prompted each trial):
+python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
+    --hold 0 --grasp-type crimp --pull-dist 0.05
 ```
 
 ### Paired Evaluation (WITH vs WITHOUT taxonomy — the main comparison experiment)
@@ -304,6 +311,9 @@ python3 paired_eval.py
 
 # Or scripted, for a planned full session (20 pairs per hold = 80 total pairs, ~160 rollouts):
 python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+
+# With disturbance rejection pull test (angle prompted per trial):
+python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20 --pull-dist 0.05
 ```
 
 During the run, type `q` + Enter at any "Press Enter ..." prompt to save and

@@ -204,7 +204,8 @@ class PairedEvaluator:
     def __init__(self, with_ckpt, no_ckpt,
                  max_steps=200, action_horizon=8,
                  dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
-                 num_inference_steps=10):
+                 num_inference_steps=10,
+                 pull_dist=None, pull_angle=None):
 
         # Batch state — set at start of each batch via _set_batch()
         self.hold_id            = None
@@ -215,6 +216,8 @@ class PairedEvaluator:
         self.action_horizon     = action_horizon
         self.dry_run            = dry_run
         self.num_inf_steps      = num_inference_steps
+        self.pull_dist          = pull_dist   # meters; None = pull test disabled
+        self.pull_angle         = pull_angle  # degrees; None = prompt per trial
         self.results_dir        = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -445,6 +448,34 @@ class PairedEvaluator:
                                 dynamic=False, buffer_time=0.2, block=True)
             time.sleep(0.5)
         return pc
+
+    def _execute_pull(self, angle_deg):
+        """Move arm in a straight line in the X,Y plane by self.pull_dist meters.
+
+        Called after live control is already stopped. The arm is left at the
+        displaced pose; the next _reset_robot() call will bring it home.
+        """
+        if self.fa is None:
+            print("  [pull] No FrankaArm — skipping")
+            return
+        import copy
+        angle_rad = np.deg2rad(angle_deg)
+        dx = self.pull_dist * np.cos(angle_rad)
+        dy = self.pull_dist * np.sin(angle_rad)
+        try:
+            self.fa.stop_skill()
+        except Exception:
+            pass
+        time.sleep(0.3)
+        current_pose = self.fa.get_pose()
+        target_pose = copy.deepcopy(current_pose)
+        target_pose.translation = current_pose.translation + np.array([dx, dy, 0.0])
+        print(f"  [pull] {self.pull_dist*100:.1f} cm at {angle_deg:.0f}° "
+              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) ...")
+        try:
+            self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
+        except Exception as e:
+            print(f"  [pull] WARNING: move failed: {e}")
 
     def _reset_robot(self):
         """Bring arm + hand back to the start-of-trial pose."""
@@ -682,6 +713,22 @@ class PairedEvaluator:
         if not self.dry_run:
             self._stop_live_control()
 
+        # Pull test (only if --pull-dist was set)
+        pull_angle_used = None
+        if self.pull_dist is not None and not self.dry_run and self.fa is not None:
+            if self.pull_angle is not None:
+                pull_angle_used = self.pull_angle
+            else:
+                while True:
+                    try:
+                        raw = input(f"  Pull angle for {model_label} "
+                                    f"(degrees, X=0 Y=90): ").strip()
+                        pull_angle_used = float(raw)
+                        break
+                    except ValueError:
+                        print("  Enter a number.")
+            self._execute_pull(pull_angle_used)
+
         # Collect rating
         print(f"  Rate this trial:   g = good   b = bad   s = skip")
         while True:
@@ -699,7 +746,7 @@ class PairedEvaluator:
         cv2.destroyAllWindows()
         symbol = "✓" if rating == "good" else ("✗" if rating == "bad" else "–")
         print(f"  {symbol} {model_label}: {rating.upper()}")
-        return rating, aborted
+        return rating, aborted, pull_angle_used
 
     # ── Pair loop ────────────────────────────────────────────────────────────
 
@@ -770,11 +817,13 @@ class PairedEvaluator:
             overlay_tag = (f"B{batch_idx+1} "
                            f"pair {batch_pair_idx+1}/{batch_n_pairs} "
                            f"[{self.grasp_type}]")
-            rating, trial_aborted = self._run_single_trial(
+            rating, trial_aborted, pull_angle_used = self._run_single_trial(
                 policy, norm, cfg, gt_id, scene_pc, model_label, pair_idx,
                 overlay_tag=overlay_tag)
 
             ratings[model_label] = rating
+            if pull_angle_used is not None:
+                pc_stats[model_label]["pull_angle_deg"] = pull_angle_used
             aborted = aborted or trial_aborted
             if trial_aborted:
                 break
@@ -791,7 +840,7 @@ class PairedEvaluator:
             drift_m = float(np.linalg.norm(c1 - c2))
             print(f"    PC centroid drift between trials: {drift_m*1000:.1f} mm")
 
-        return {
+        result = {
             "pair":           pair_idx,
             "batch":          batch_idx,
             "batch_pair":     batch_pair_idx,
@@ -806,6 +855,9 @@ class PairedEvaluator:
             "aborted":        aborted,
             "timestamp":      datetime.now().isoformat(),
         }
+        if self.pull_dist is not None:
+            result["pull_dist_m"] = self.pull_dist
+        return result
 
     # ── Batch / session orchestration ────────────────────────────────────────
 
@@ -1203,6 +1255,13 @@ def main():
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR))
     parser.add_argument("--dry-run", action="store_true",
                         help="No robot — cameras only, for testing the script flow")
+    parser.add_argument("--pull-dist", type=float, default=None,
+                        help="If set, execute a pull test after each rollout: move the arm "
+                             "this many meters in the X,Y plane and rate whether the hold "
+                             "moved with it. E.g. --pull-dist 0.05 for a 5 cm pull.")
+    parser.add_argument("--pull-angle", type=float, default=None,
+                        help="Direction of the pull in degrees (0=+X, 90=+Y). "
+                             "If omitted, you will be prompted to enter it before each pull.")
     args = parser.parse_args()
 
     # Decide run mode from CLI args (may be overridden by --resume below)
@@ -1236,6 +1295,8 @@ def main():
         dry_run=args.dry_run,
         results_dir=args.results_dir,
         num_inference_steps=args.inference_steps,
+        pull_dist=args.pull_dist,
+        pull_angle=args.pull_angle,
     )
 
     # If resuming, load the JSON and pull planned_batches / mode from it.

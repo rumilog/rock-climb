@@ -170,7 +170,8 @@ def build_state_vector_30(arm_joints, ee_pos, ee_quat, hand_joints):
 class PolicyEvaluator:
     def __init__(self, ckpt_path, hold_id=0, n_trials=5, max_steps=200,
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
-                 num_inference_steps=10, grasp_type=None, zero_pc=False):
+                 num_inference_steps=10, grasp_type=None, zero_pc=False,
+                 pull_dist=None, pull_angle=None):
         self.hold_id = hold_id
         self.ckpt_name = Path(ckpt_path).parent.name  # e.g. "pc_with_taxonomy"
         self.n_trials = n_trials
@@ -179,6 +180,8 @@ class PolicyEvaluator:
         self.dry_run = dry_run
         self.zero_pc = zero_pc
         self.num_inference_steps = num_inference_steps
+        self.pull_dist = pull_dist    # meters; None = pull test disabled
+        self.pull_angle = pull_angle  # degrees; None = prompt per trial
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -510,6 +513,34 @@ class PolicyEvaluator:
             except Exception:
                 pass
 
+    def _execute_pull(self, angle_deg):
+        """Move arm in a straight line in the X,Y plane by self.pull_dist meters.
+
+        Called after live control is already stopped. The arm is left at the
+        displaced pose; the next _reset_robot() call will bring it home.
+        """
+        if self.fa is None:
+            print("  [pull] No FrankaArm — skipping")
+            return
+        import copy
+        angle_rad = np.deg2rad(angle_deg)
+        dx = self.pull_dist * np.cos(angle_rad)
+        dy = self.pull_dist * np.sin(angle_rad)
+        try:
+            self.fa.stop_skill()
+        except Exception:
+            pass
+        time.sleep(0.3)
+        current_pose = self.fa.get_pose()
+        target_pose = copy.deepcopy(current_pose)
+        target_pose.translation = current_pose.translation + np.array([dx, dy, 0.0])
+        print(f"  [pull] {self.pull_dist*100:.1f} cm at {angle_deg:.0f}° "
+              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) ...")
+        try:
+            self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
+        except Exception as e:
+            print(f"  [pull] WARNING: move failed: {e}")
+
     def _reset_robot(self, timeout=15):
         print("Resetting robot to home pose...")
         just_stopped = False
@@ -712,6 +743,21 @@ class PolicyEvaluator:
         if not self.dry_run:
             self._stop_live_control()
 
+        # Pull test (only if --pull-dist was set)
+        pull_angle_used = None
+        if self.pull_dist is not None and not self.dry_run and self.fa is not None:
+            if self.pull_angle is not None:
+                pull_angle_used = self.pull_angle
+            else:
+                while True:
+                    try:
+                        raw = input("  Pull angle (degrees, X=0 Y=90): ").strip()
+                        pull_angle_used = float(raw)
+                        break
+                    except ValueError:
+                        print("  Enter a number.")
+            self._execute_pull(pull_angle_used)
+
         print("Trial done. Rate the grasp:  g = good,  b = bad,  s = skip")
         while True:
             key = cv2.waitKey(0) & 0xFF
@@ -738,6 +784,9 @@ class PolicyEvaluator:
             "encoder_type": self.encoder_type,
             "model": self.ckpt_name,
         }
+        if pull_angle_used is not None:
+            result["pull_dist_m"] = self.pull_dist
+            result["pull_angle_deg"] = pull_angle_used
         if self.use_pc:
             result["grasp_type"] = self.grasp_type
             result["grasp_type_id"] = self.grasp_type_id
@@ -834,6 +883,13 @@ def main():
     parser.add_argument("--zero-pc", action="store_true",
                         help="Feed all-zeros as the point cloud instead of capturing. "
                              "Use to test whether the model ignores the PC input.")
+    parser.add_argument("--pull-dist", type=float, default=None,
+                        help="If set, execute a pull test after each rollout: move the arm "
+                             "this many meters in the X,Y plane and rate whether the hold "
+                             "moved with it. E.g. --pull-dist 0.05 for a 5 cm pull.")
+    parser.add_argument("--pull-angle", type=float, default=None,
+                        help="Direction of the pull in degrees (0=+X, 90=+Y). "
+                             "If omitted, you will be prompted to enter it before each pull.")
     args = parser.parse_args()
 
     global MAX_JOINT_STEP_RAD
@@ -850,6 +906,8 @@ def main():
         num_inference_steps=args.inference_steps,
         grasp_type=args.grasp_type,
         zero_pc=args.zero_pc,
+        pull_dist=args.pull_dist,
+        pull_angle=args.pull_angle,
     )
 
     def _cleanup(signum=None, frame=None):

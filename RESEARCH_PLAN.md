@@ -244,7 +244,7 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 
 1. **Grasp success rate** — binary: did the hand achieve stable contact?
 2. **Grasp type accuracy** — did the robot use the correct grasp strategy?
-3. **Hold stability** — can the grasp sustain a gentle pull force?
+3. **Hold stability (disturbance rejection test)** — after policy convergence, the arm executes a Cartesian displacement of ~5 cm in a specified X,Y direction; trial is a success if the hold visibly co-displaces with the arm. Direction is chosen perpendicular to the hold's main axis each trial. This is the primary success criterion — equivalent to the standard "lift test" in manipulation papers but adapted for holds that cannot be picked up.
 4. **Cross-category generalization** — success on held-out test_edge
 5. **Ablations**:
    - With vs without grasp type conditioning ← **LOAD-BEARING** — preliminary results confirm conditioning wins. `--no-grasp-conditioning` flag implemented 2026-04-14.
@@ -259,10 +259,11 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 **Trial counts:** 20+ trials per model per grasp type = 160+ total trials minimum.
 
 **Per-trial metrics:**
-1. Grasp success (binary 0/1)
-2. Grasp type correctness (binary 0/1 — human judgment)
-3. Hold stability (binary 0/1 — sustains gentle tug)
-4. Contact time (seconds from start to first contact)
+1. Grasp success (binary 0/1 — disturbance rejection test: arm displaced ~5 cm, did hold move with it?)
+2. Grasp type correctness (binary 0/1 — human judgment of hand configuration)
+3. Contact time (seconds from start to first contact)
+
+**Disturbance rejection test protocol:** `--pull-dist 0.05` flag in evaluate.py / paired_eval.py. After rollout converges, arm executes `goto_pose` displacement of 5 cm at a user-specified angle in the X,Y plane (prompted each trial since holds rotate). Human visually confirms whether the hold traveled with the arm. This is a binary, unambiguous observable event — equivalent to the standard lift test in pick-and-place papers. See CLAUDE.md "Pull test angle convention" for the angle coordinate system.
 
 **Statistical tests:** Fisher's exact test for pairwise success rate comparisons.
 Report 95% Wilson confidence intervals on all success rates.

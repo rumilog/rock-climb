@@ -232,6 +232,46 @@ python3 leap_thumb_ik_test.py
 Tunable constants are marked `# TUNE` at the top of the file. Print diagnostics
 every 100 frames; adjust `VERBOSE_THUMB_EVERY` to change frequency.
 
+### Pull test angle convention (evaluate.py + paired_eval.py)
+
+When `--pull-dist` is set, the arm moves in a straight line in the world X,Y plane
+after the policy converges. The angle is entered in degrees (0–360):
+
+```
+                 0° / 360°
+                  (+X, away from robot)
+                      ↑
+                      |
+                      |
+  90°  (+Y left) ←----+----→  270° (-Y right)
+                      |
+                      |
+                      ↓
+                 180° (-X)
+               [ROBOT BASE]
+                 [YOU]
+```
+
+- **0°** — arm pulls hold away from the robot (toward you) — most common
+- **90°** — arm pulls to the robot's left
+- **180°** — arm pulls toward the robot base (away from you)
+- **270°** — arm pulls to the robot's right
+
+Pick the angle perpendicular to the hold's main axis so you're testing grip
+friction, not sliding along a smooth face. If `--pull-angle` is not set, the
+terminal prompts you for the angle before each pull (recommended since holds rotate).
+
+```bash
+# 5 cm pull, prompt for angle each trial (recommended — holds rotate)
+python3 evaluate.py --checkpoint ... --pull-dist 0.05
+
+# 5 cm pull, fixed angle for whole session
+python3 evaluate.py --checkpoint ... --pull-dist 0.05 --pull-angle 0
+
+# Same for paired_eval
+python3 paired_eval.py --pull-dist 0.05
+```
+
 ### UDP packet format from Unity (28 values)
 
 `HandController.cs` (the LEAP version in `TeleoperationUnity/LEAP/leaphandv1/`) sends

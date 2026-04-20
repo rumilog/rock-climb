@@ -155,11 +155,15 @@ could indicate learning rate issues.
 
 ### Per-trial recording
 For EVERY evaluation trial, record:
-1. **Grasp success** — binary: did the hand achieve stable contact? (0/1)
+1. **Grasp success (disturbance rejection)** — after rollout converges, arm moves 5 cm in a specified X,Y direction (`--pull-dist 0.05`); success = hold visibly moves with the arm (0/1). This is the primary success criterion.
 2. **Grasp type correctness** — did the hand form the correct grip shape? (0/1)
-3. **Hold stability** — can the grasp sustain a gentle tug? (0/1)
-4. **Contact time** — seconds from episode start to first contact
-5. **Point cloud used** — save the PC for post-hoc analysis
+3. **Contact time** — seconds from episode start to first contact
+
+**How to run with pull test:**
+```bash
+python3 paired_eval.py --pull-dist 0.05   # angle prompted each trial
+```
+Enter the pull angle when prompted (see CLAUDE.md "Pull test angle convention" for the diagram). Use the direction perpendicular to the hold's main axis.
 
 ### Trial counts
 - Per model × per grasp type: **minimum 20 trials** (ideally 30)

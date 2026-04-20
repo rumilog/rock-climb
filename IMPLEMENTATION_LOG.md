@@ -71,6 +71,8 @@ source ~/frankapy/catkin_ws/devel/setup.bash
 | `data_collection/point_cloud_utils.py` | COMPLETE | NEW - PC processing utilities |
 | `data_collection/evaluate.py` | COMPLETE | PC policy loading, runtime capture, grasp type arg |
 | `data_collection/paired_eval.py` | COMPLETE (2026-04-17) | Side-by-side WITH-vs-WITHOUT-taxonomy evaluator: paired trials with shared hold position, per-trial PC capture, batched multi-grasp sessions, incremental save, clean `q` quit, `--resume` continuation, Wilson-CI + McNemar analysis (overall + per grasp type) |
+| `data_collection/evaluate.py` | UPDATED (2026-04-20) | Added disturbance rejection pull test: `--pull-dist` (meters) + `--pull-angle` (degrees, or prompted per trial). After rollout, arm executes `goto_pose` displacement in X,Y; human visually confirms hold moved. Angle/dist logged in JSON. Off by default. |
+| `data_collection/paired_eval.py` | UPDATED (2026-04-20) | Same pull test added. Per-trial `pull_angle_deg` stored in `pc_stats[model_label]` within each pair's JSON entry. |
 | `RESEARCH_PLAN.md` | CREATED | Full research plan with citations |
 | `IMPLEMENTATION_LOG.md` | UPDATED | This file |
 
