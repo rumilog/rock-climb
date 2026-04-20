@@ -28,7 +28,7 @@ import numpy as np
 DEFAULT_WORKSPACE_BOUNDS = {
     "x_min": 0.30, "x_max": 0.85,
     "y_min": -0.35, "y_max": 0.35,
-    "z_min": 0.005, "z_max": 0.30,
+    "z_min": 0.006, "z_max": 0.30,
 }
 
 DEPTH_SCALE = 0.001  # RealSense default: uint16 mm → meters

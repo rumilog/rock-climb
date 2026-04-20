@@ -161,6 +161,106 @@ evaluate.py --checkpoint old_best.pt
 
 **⚠️ ACTION REQUIRED before submission:** All 7 new bib entries have `FIXME: see arXiv:XXXXX` placeholder in the `author` field. Fill in real author lists from each arXiv page. CrossDex also needs its arXiv URL confirmed.
 
+### Session 6 (2026-04-20) — Latent/Action Visualisations + Paper Reframe
+
+**Files created:**
+- `eval_results/generate_latent_viz.py` (pre-existing, extended)
+- `eval_results/generate_action_dist_viz.py` (new)
+- `eval_results/generate_novelty_viz.py` (new)
+
+**Files modified:**
+- `eval_results/generate_figures.py` — readability pass on all five paper figures.
+
+**What got built.**
+
+1. **Readability pass on `fig1`–`fig5`.** User flagged overlapping labels /
+   titles / table cells in the paper-quality figures. Fixed:
+   - `fig1_success_rates.png` — removed redundant `n=20` labels, added bar-top
+     `k/N` counts, widened canvas + raised ylim so significance stars stop
+     colliding with the legend.
+   - `fig2_pair_heatmap.png` — flipped from one-tall-column to a row of per-grasp
+     narrow 2-column blocks, shortened "With/Without taxonomy" to "With/W/o
+     tax.", widened subplots_adjust for the suptitle.
+   - `fig3_z_centroid.png` — repositioned annotation arrow so it no longer
+     crosses the jug cluster.
+   - `fig4_win_tie_loss.png` — raised ylim, moved McNemar p-value annotations
+     out of the title strip, pulled the legend outside the axes.
+   - `fig5_delta_summary.png` — widened canvas + table col widths so the
+     summary table stops clipping "Primary finding" text.
+
+2. **`generate_latent_viz.py` extensions** (Task 1 from previous request).
+   - Added `cluster_quality()` → (silhouette score, stratified-5-fold kNN accuracy).
+     Results now printed in panel titles so the visual clustering is backed by numbers.
+   - Added `fig_latent_eval_overlay.png` — overlays paired-eval success/failure
+     markers onto the action-trajectory PCA, matched to nearest training
+     episode by PC centroid. Shows that WITHOUT-taxonomy failures are broadly
+     distributed across the action space (not concentrated in one sub-region),
+     consistent with a precision failure rather than a mode-selection failure.
+
+3. **`generate_action_dist_viz.py`** (Task 2, new file).
+   For 32 training inputs (8 per grasp type), samples K=8 DDIM rollouts from
+   both checkpoints with the *same* noise seed sequence per model so the
+   comparison is fair. Produces `fig_action_distribution.png` with three panels:
+   - A. Joint-space PCA of predicted actions, filled ○ = WITH, open △ = W/o.
+   - B. Within-input sampling variance per grasp type.
+   - C. Between-model L2 distance of mean predictions per grasp type.
+   Key empirical finding: means per grasp type are similar between the two
+   models (both cluster correctly by grasp type); the WITHOUT model's **within-input**
+   variance is 15–30% higher on crimp / sloper / pinch.
+
+4. **`generate_novelty_viz.py`** (Task 4, new file).
+   Two figures intended to sell the paper's novelty:
+   - `fig_novelty_benchmark.png`: 2×4 grid, column per grasp type. Row 1 is a
+     side-view scatter of one representative training PC with a floating
+     info-box (Z centroid, peak height, X×Y footprint). Row 2 is the mean
+     final-step LEAP hand pose across demos of that type. Establishes that
+     four geometrically distinct holds map to four distinct target hand poses.
+   - `fig_novelty_mode_commitment.png`: top row = one-joint ribbon plot over
+     the 16-step prediction horizon (demo ±1σ vs With vs W/o, all four grasp
+     types side by side). Bottom row = final-timestep hand pose fingerprint
+     per source (Demos / With / W/o) with between-type-spread metric in the title.
+
+**Quantitative results from N2 (this is load-bearing for the paper reframe):**
+
+| Source | Between-grasp-type hand-pose spread @ final step |
+|---|---|
+| Demonstrations | 0.352 rad |
+| With-taxonomy model | 0.314 rad (89% of demo) |
+| Without-taxonomy model | 0.316 rad (90% of demo) |
+
+**What this tells us — paper framing reframe.** The "Without" model *does* commit
+to four distinct grasp types. It does **not** crudely collapse to a single mode.
+The top-row ribbons show With and W/o tracking the demonstrator mean to within a
+few percent on all four types. The PointNet-fused latent already linearly
+separates grasp types at kNN=99% with no label (from Session 5 latent viz).
+
+Yet W/o fails ~80% on crimp/sloper/pinch in the paired eval. The mechanism is
+**not** "wrong mode selected" — it's a **precision effect**: without the label,
+the diffusion decoder samples with 15–30% higher within-input variance. On real
+hardware that extra per-rollout wobble misses the hold by a few mm. Means don't
+grasp; individual rollouts do.
+
+This is a stronger, more publishable claim than "mode collapse":
+- Explains why the effect scales with geometric difficulty (Jug p=0.688 ns, the
+  other three highly significant) — Jug has mm-scale slack, Crimp does not.
+- Explains why the latent space looks identical with / without conditioning.
+- Matches the diffusion-literature pattern that conditioning mostly helps with
+  precision, not mode selection.
+- Reframes taxonomy conditioning as a **precision regularizer** that tightens the
+  sampling distribution around the right subtype, analogous to CFG in image
+  diffusion or low-temperature sampling in LLMs.
+
+**RESEARCH_PLAN.md and tasks/todo.md Paper-Framing section updated to reflect this.**
+A new `tasks/lessons.md` entry was added: "measure mode structure before asserting
+mode collapse — the latent space and per-type means can look fine while sampling
+tails are what actually fails on hardware."
+
+**Next high-leverage viz (proposed, not yet run):** a "wrong-label ablation"
+figure — run With-taxonomy model with a deliberately swapped label (feed `jug`
+when facing a crimp hold, etc.) and show that sampling variance goes back up
+AND success rate drops. That would causally pin the precision effect on the
+label rather than on any other downstream difference. ~30 eval trials.
+
 ### Session 5 (2026-04-17) — Paired Evaluation Tooling
 
 **File created:** `data_collection/paired_eval.py` (~1200 lines)

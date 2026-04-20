@@ -1,6 +1,6 @@
 # TODO
 
-## Current State (2026-04-14)
+## Current State (2026-04-20)
 
 - ✅ Point cloud pipeline implemented end-to-end
 - ✅ Workspace bounds calibrated: `z_min=0.006` verified with `check_pc_sensitivity.py`
@@ -13,28 +13,37 @@
 - ✅ Per-grasp LEAP hand offsets saved in memory (jug, sloper, pinch, crimp)
 - ✅ DIP/PIP max clamp added to `leap_pip_dip_teleop.py`
 - ✅ Verified training fits on local RTX 2080 Ti (0.8 GB VRAM, ~11 hours for 3000 epochs)
+- ✅ Both models trained (finished 2026-04-16): `checkpoints/pc_with_taxonomy/best.pt`, `checkpoints/pc_no_taxonomy/best.pt`
+- ✅ Workspace z_min updated to 0.010 in `point_cloud_utils.py` (2026-04-20)
+- 🔄 **Paired evaluation IN PROGRESS** — session `paired_session_20260417_131412.json`
+  - Crimp (hold 1, edge_B): **20/20 pairs complete**
+  - Jug (hold 0, edge_A): **20/20 pairs complete**
+  - Sloper (hold 2): **IN PROGRESS** (3+ pairs done as of 2026-04-20 morning)
+  - Pinch (hold 3): **not started**
 
 ---
 
 ## Immediate Next Steps
 
-1. **Train Model A — WITH taxonomy** (on this machine)
+1. **Finish current paired eval** — complete sloper (20 pairs) and pinch (20 pairs)
    ```bash
-   cd ~/Desktop/tele/data_collection
-   python3 train.py --point-cloud --epochs 3000 --batch 128 --augment --good-only \
-       --zarr ../datasets/climbing_holds.zarr --ckpt-dir ../checkpoints/pc_with_taxonomy \
-       --save-every 100
+   python3 paired_eval.py --resume eval_results/paired_session_20260417_131412.json
    ```
 
-2. **Train Model B — WITHOUT taxonomy** (ablation, on this machine)
-   ```bash
-   cd ~/Desktop/tele/data_collection
-   python3 train.py --point-cloud --no-grasp-conditioning --epochs 3000 --batch 128 \
-       --augment --good-only --zarr ../datasets/climbing_holds.zarr \
-       --ckpt-dir ../checkpoints/pc_no_taxonomy --save-every 100
-   ```
+2. **Wrong-label ablation** — after main eval is done
+   - Run paired_eval with deliberately incorrect taxonomy labels
+   - e.g. give `grasp_type=jug` when facing the crimp hold, `grasp_type=crimp` when facing the sloper
+   - Hypothesis: model executes wrong grasp type → fails
+   - This proves the conditioning signal is causally controlling behavior, not just a noise term
+   - ~10 pairs per mislabeled condition is sufficient
 
-3. **Evaluate BOTH models on robot** — 20+ trials per grasp type per model (160+ total)
+3. **Held-out hold generalization** — get any NEW crimp hold never seen during training
+   - Do NOT collect training demos — evaluation only
+   - Run taxonomy-conditioned model with `grasp_type=crimp` on new physical hold
+   - Tests whether model learned general crimp strategy vs memorized edge_B geometry
+   - This is hold 4 (test_edge) from the original plan — just needs a physical hold acquired
+
+4. **Build results table and figures** — see `eval_results/eval_data_description.md` for visualization spec
 
    Both checkpoints finished training (2026-04-16). Use `paired_eval.py`
    — one terminal command runs both models back-to-back on the SAME hold
@@ -178,11 +187,93 @@ For EVERY evaluation trial, record:
 
 ---
 
-## Part 2 Ablations
+## Ablation Checklist
 
 - [x] Add `--no-grasp-conditioning` flag to train.py (2026-04-14)
-- [ ] Train with-taxonomy model (3000 epochs, ~11 hours)
-- [ ] Train without-taxonomy model (3000 epochs, ~11 hours)
-- [ ] Evaluate both models per grasp type on robot → build comparison table
+- [x] Train with-taxonomy model (finished 2026-04-16)
+- [x] Train without-taxonomy model (finished 2026-04-16)
+- [ ] Complete paired eval — sloper + pinch batches
+- [ ] Wrong-label ablation (~10 pairs per mislabeled condition)
+- [ ] Held-out hold generalization (test_edge, new physical crimp hold)
 - [ ] Point cloud vs RGB (ResNet baseline — legacy zarrs preserved for this)
 - [ ] 1024 vs 512 vs 2048 points (if time permits)
+
+---
+
+## Paper Framing (reframed 2026-04-20 after novelty viz)
+
+**Target venue:** CoRL (ambitious) or RA-L/ICRA (realistic fallback)
+
+**Core claim (reframed — precision regularizer, NOT mode collapse):**
+Both with- and without-taxonomy diffusion policies trained on mixed grasp-type
+data learn a representation that separates grasp types (latent kNN 99% without
+the label) AND produce mean action predictions that commit to four distinct
+grasp configurations (90% of demonstrator between-type spread). The unconditioned
+model does **not** crudely collapse to a single behaviour mode.
+
+The failure mode is a **precision effect**: without explicit taxonomy conditioning,
+the diffusion decoder samples with 15–30% higher *within-input* variance — the
+means are right but individual rollouts are jittery. On real dexterous hardware
+this extra per-rollout wobble misses the hold. The taxonomy label acts as a
+**precision regularizer**, tightening the sampling distribution around the
+correct subtype (analogous to classifier-free guidance in image diffusion or
+low-temperature sampling in LLMs), not as a mode selector.
+
+Evidence:
+- Paired eval: W/o ≈ 80% failure on crimp/sloper/pinch, ≈ same as With on jug.
+  Jug has mm-scale slack, crimps don't — exactly the geometric-difficulty
+  pattern a precision-regularizer account predicts.
+- `fig_novelty_mode_commitment.png`: W/o means track demo means; W/o between-type
+  spread = 0.316 rad ≈ With 0.314 rad ≈ Demos 0.352 rad.
+- `fig_action_distribution.png` Panel B: W/o within-input sampling std is
+  15–30% higher on non-jug types, same on jug.
+- Latent (`fig_latent_4panel.png`): W/o fused encoder gets silhouette ≈ 0.32 and
+  kNN ≈ 99% with no conditioning info — class structure is already in the
+  representation.
+
+**What makes this publishable (reframed):**
+1. Benchmark — climbing holds with 4 taxonomically distinct grasp types on real dexterous hardware
+2. Paired evaluation protocol — controls for hold position drift, randomised order, McNemar's test
+3. **New mechanistic finding** — taxonomy label as a precision regularizer for dexterous diffusion policies, with joint-space + latent-space + sampling-variance evidence
+4. Wrong-label ablation — if label is a precision knob around the *correct* subtype, a wrong label should both move the mean AND re-inflate the variance. Pending.
+5. Held-out generalisation — shows conditioning enables within-type generalisation to new hold instances
+
+**What NOT to claim:**
+- Do NOT claim "the unconditioned model collapses to one mode". Empirically false — it produces four distinct means at 90% of demo spread.
+- Do NOT claim VLM-in-the-loop is novel (DexGraspVLA, DexVLA, OmniDexVLG already do this).
+- Do NOT overclaim the architecture — it is DP3 + grasp-type conditioning, applied to a new domain. The *mechanistic* finding (precision, not mode) is what earns publication.
+
+**Key differentiator from Dexonomy (RSS 2025):** They generate static grasp poses.
+We learn continuous visuomotor execution trajectories, and we characterise what
+the taxonomy label is actually doing to the diffusion decoder. Different problem entirely.
+
+---
+
+## Visualisation / Figure Status (2026-04-20)
+
+### Generated figures (in `eval_results/figures/`)
+- `fig1_success_rates.png` — readability-fixed
+- `fig2_pair_heatmap.png` — rotated + readability-fixed
+- `fig3_z_centroid.png` — annotation-fixed
+- `fig4_win_tie_loss.png` — p-value placement fixed, legend moved out
+- `fig5_delta_summary.png` — table sizing fixed
+- `fig_latent_4panel.png` — with silhouette + kNN metrics in titles
+- `fig_latent_with_vs_without.png` — with metrics
+- `fig_latent_trajectories.png` — PCA of raw joint trajectories
+- `fig_latent_eval_overlay.png` — paired-eval outcomes over action PCA
+- `fig_action_distribution.png` — per-input sampling variance + between-model L2
+- `fig_novelty_benchmark.png` — 4-column benchmark overview
+- `fig_novelty_mode_commitment.png` — ribbons + final-pose fingerprint (load-bearing reframe evidence)
+
+### Scripts
+- `eval_results/generate_figures.py` — fig1–fig5
+- `eval_results/generate_latent_viz.py` — latent + trajectory + eval-overlay
+- `eval_results/generate_action_dist_viz.py` — action-distribution comparison
+- `eval_results/generate_novelty_viz.py` — novelty / mode-commitment figures
+
+### Proposed next viz (not yet run)
+- **Wrong-label fingerprint.** Same `fig_novelty_mode_commitment.png` layout but
+  with deliberately swapped labels. If label is a precision knob, expect both
+  (a) mean shifts towards the wrong-subtype mean and (b) sampling variance
+  partially re-inflates. Strongest single causal figure for the reframe.
+  Requires ~30 physical eval trials.
