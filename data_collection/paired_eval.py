@@ -205,7 +205,8 @@ class PairedEvaluator:
                  max_steps=200, action_horizon=8,
                  dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10,
-                 pull_dist=None, pull_angle=None):
+                 pull_dist=None, pull_angle=None, pull_stiffness=None,
+                 pull_z_stiffness=None, pull_z_bias=0.0):
 
         # Batch state — set at start of each batch via _set_batch()
         self.hold_id            = None
@@ -216,8 +217,11 @@ class PairedEvaluator:
         self.action_horizon     = action_horizon
         self.dry_run            = dry_run
         self.num_inf_steps      = num_inference_steps
-        self.pull_dist          = pull_dist   # meters; None = pull test disabled
-        self.pull_angle         = pull_angle  # degrees; None = prompt per trial
+        self.pull_dist          = pull_dist       # meters; None = pull test disabled
+        self.pull_angle         = pull_angle      # degrees; None = prompt per trial
+        self.pull_stiffness     = pull_stiffness      # N/m; None = position control, float = impedance
+        self.pull_z_stiffness   = pull_z_stiffness    # N/m; None = same as pull_stiffness
+        self.pull_z_bias        = pull_z_bias          # meters upward bias on Z target to counteract LEAP hand weight
         self.results_dir        = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -469,11 +473,20 @@ class PairedEvaluator:
         time.sleep(0.3)
         current_pose = self.fa.get_pose()
         target_pose = copy.deepcopy(current_pose)
-        target_pose.translation = current_pose.translation + np.array([dx, dy, 0.0])
+        target_pose.translation = current_pose.translation + np.array([dx, dy, self.pull_z_bias])
+        mode_str = (f"impedance k={self.pull_stiffness} N/m"
+                    if self.pull_stiffness is not None else "position control")
         print(f"  [pull] {self.pull_dist*100:.1f} cm at {angle_deg:.0f}° "
-              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) ...")
+              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) [{mode_str}] ...")
         try:
-            self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
+            if self.pull_stiffness is not None:
+                k = float(self.pull_stiffness)
+                kz = float(self.pull_z_stiffness) if self.pull_z_stiffness is not None else k
+                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False,
+                                  buffer_time=0.2, use_impedance=True,
+                                  cartesian_impedances=[k, k, kz, 10.0, 10.0, 10.0])
+            else:
+                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
         except Exception as e:
             print(f"  [pull] WARNING: move failed: {e}")
 
@@ -857,6 +870,8 @@ class PairedEvaluator:
         }
         if self.pull_dist is not None:
             result["pull_dist_m"] = self.pull_dist
+        if self.pull_stiffness is not None:
+            result["pull_stiffness_Nm"] = self.pull_stiffness
         return result
 
     # ── Batch / session orchestration ────────────────────────────────────────
@@ -1262,6 +1277,21 @@ def main():
     parser.add_argument("--pull-angle", type=float, default=None,
                         help="Direction of the pull in degrees (0=+X, 90=+Y). "
                              "If omitted, you will be prompted to enter it before each pull.")
+    parser.add_argument("--pull-stiffness", type=float, default=None,
+                        help="If set, use Cartesian impedance control during the pull with "
+                             "this translational stiffness in N/m (e.g. 50). The arm will "
+                             "only exert a bounded force, so a bad grasp won't be dragged. "
+                             "If omitted, position control is used (arm exerts unlimited force).")
+    parser.add_argument("--pull-z-stiffness", type=float, default=None,
+                        help="Z-axis (height) stiffness in N/m during impedance pull. "
+                             "If omitted, uses --pull-stiffness for all axes. "
+                             "Set lower than --pull-stiffness to allow vertical compliance "
+                             "while keeping X/Y stiff (e.g. --pull-stiffness 200 --pull-z-stiffness 20).")
+    parser.add_argument("--pull-z-bias", type=float, default=0.0,
+                        help="Upward Z offset (meters) added to the target pose during impedance pull. "
+                             "Compensates for LEAP hand weight not in Franka gravity model — "
+                             "prevents arm from sagging into hold. Tune empirically: start at 0.02 "
+                             "and increase until arm neither droops nor presses down. (default: 0.0)")
     args = parser.parse_args()
 
     # Decide run mode from CLI args (may be overridden by --resume below)
@@ -1297,6 +1327,9 @@ def main():
         num_inference_steps=args.inference_steps,
         pull_dist=args.pull_dist,
         pull_angle=args.pull_angle,
+        pull_stiffness=args.pull_stiffness,
+        pull_z_stiffness=args.pull_z_stiffness,
+        pull_z_bias=args.pull_z_bias,
     )
 
     # If resuming, load the JSON and pull planned_batches / mode from it.

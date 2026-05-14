@@ -159,7 +159,7 @@ python3 VR_Teleoperation_Minimum.py
 Terminal 2 (after Terminal 1 prints "Teleoperation started"):
 ```bash
 cd ~/Desktop/tele/data_collection
-python3 collect_data.py --hold 0 --point-cloud --grasp-type crimp
+python3 collect_data.py --hold 0 --point-cloud --grasp-type jug --task climbing_holds_rig
 ```
 
 Valid values for `--grasp-type` (must match `GRASP_TYPE_IDS` in `episode_storage.py`):
@@ -171,6 +171,33 @@ Valid values for `--grasp-type` (must match `GRASP_TYPE_IDS` in `episode_storage
 
 Always use one of these four exact strings when running `collect_data.py --point-cloud`.
 
+### `--task` is the dataset name — pick one and never mix eras (CRITICAL)
+
+`collect_data.py` writes to `{DEFAULT_DATASET_DIR}/{task_name}.zarr`. Defaults
+are `DEFAULT_DATASET_DIR=/mnt/ssd/rumi_tele_datasets` and
+`DEFAULT_TASK_NAME=climbing_holds`. The zarr is opened with `zarr.open(..., mode="a")`,
+which means **`collect_data.py` APPENDS to whatever `<task>.zarr` already exists
+on disk** — it does not overwrite, but new episodes are tacked onto the back of
+the existing arrays with no separator.
+
+This is dangerous because the legacy `climbing_holds.zarr` on disk is the
+**flat-table 200-episode dataset** (collected at `z_min=0.006`, no rig). Running
+`collect_data.py` with no `--task` will silently merge new rig episodes into
+that legacy dataset, producing a frankenstein zarr that mixes two distributions.
+
+**Rule:** for any **spring-testbed-era collection**, always pass
+`--task climbing_holds_rig` (or another distinct name) so the new data lives
+in its own zarr file (`/mnt/ssd/rumi_tele_datasets/climbing_holds_rig.zarr`).
+Use the SAME `--task` name across every collection session for the same dataset
+(all 4 hold/grasp combos = one zarr). NEVER omit `--task` on this machine; the
+default name points at the legacy flat-table dataset.
+
+Existing zarrs on disk (2026-05-13) — do not touch with `--task` overrides:
+- `climbing_holds.zarr` — flat-table 200-ep PC dataset (legacy)
+- `climbing_holds_v2.zarr` / `climbing_holds_v2_backup_36dim.zarr` — legacy image-era
+- `climbing_holds_legacy_image.zarr` — legacy image-era
+- `climbing_holds_upload.zarr` — HuggingFace upload snapshot
+
 ### Arm park pose (fully out of all camera views for clean point cloud capture)
 
 ```python
@@ -179,21 +206,28 @@ PARK_ARM_JOINTS = [-0.11426599, -0.56029082, -0.06635159, -2.17443357, 0.0411293
 
 This is the joint configuration where the Franka arm is **fully clear of all 4 RealSense cameras** (cams 2–5), verified 2026-03-18. Use this pose whenever a clean point cloud capture is needed (evaluate.py, check_pc_sensitivity.py, etc.). The previous RESET_ARM_JOINTS (`[-0.1111, -0.1703, ...]`) sits too low and clips the cameras.
 
-### Workspace bounds — verified correct value (2026-03-18)
+### Workspace bounds — current value (2026-05-11, spring testbed era)
 
 ```python
 DEFAULT_WORKSPACE_BOUNDS = {
     "x_min": 0.30, "x_max": 0.85,
     "y_min": -0.35, "y_max": 0.35,
-    "z_min": 0.006, "z_max": 0.30,
+    "z_min": 0.027, "z_max": 0.40,
 }
 ```
 
-`z_min=0.006` is the **empirically verified correct value**. This is at the table surface (table tops at Z=0.006), so all 1024 FPS points land on the climbing hold geometry. Confirmed with `check_pc_sensitivity.py`: Z centroid ≈ 0.034 m, full hold shape captured, zero table noise.
+The **spring testbed lifts each hold ~2 cm above the original table surface**, so the lower bound moves from the table-era `z_min=0.006` to `z_min=0.027` to clip the rig deck while keeping the full hold geometry. `z_max=0.40` gives headroom for the rig + tall jugs.
 
-**History:** z_min was previously -0.02 (catastrophic — 95% table noise, model ignored PC) and then briefly 0.008 (slightly too high, clipped hold base). The correct value is 0.006.
+**History (do not regress past these):**
+- `z_min=-0.02` (table-era) — catastrophic; 95% table noise, model ignored PC.
+- `z_min=0.006` (table-era, correct for the original flat-table dataset).
+- `z_min=0.027` (CURRENT, spring testbed era — set 2026-05-11).
+- `z_max=0.30` (table-era) → `z_max=0.40` (testbed-era; rig is taller than bare table).
 
-**Before collecting any new data:** always run `check_pc_sensitivity.py` first and verify Z centroid > 0.01 m and centroids shift when the hold moves.
+**Before collecting any new data:** always run `check_pc_sensitivity.py` first with the spring testbed in place and a hold mounted. Verify:
+- Z centroid sits above the rig deck (not at it),
+- the full hold shape is captured (not just the top),
+- centroids shift by cm when the hold is rotated through the 5 orientations.
 
 ### Auto-park IPC protocol (collect_data.py ↔ GotoPoseLive)
 
@@ -252,25 +286,58 @@ after the policy converges. The angle is entered in degrees (0–360):
                  [YOU]
 ```
 
-- **0°** — arm pulls hold away from the robot (toward you) — most common
+- **0°** — arm pulls hold away from the robot (toward you)
 - **90°** — arm pulls to the robot's left
 - **180°** — arm pulls toward the robot base (away from you)
 - **270°** — arm pulls to the robot's right
 
-Pick the angle perpendicular to the hold's main axis so you're testing grip
-friction, not sliding along a smooth face. If `--pull-angle` is not set, the
-terminal prompts you for the angle before each pull (recommended since holds rotate).
+### Spring testbed protocol (active plan as of 2026-05-11)
+
+The spring displacement testbed constrains hold motion to a single axis fixed at
+**180° (toward the robot base)**. Always pass `--pull-angle 180`.
+
+The varying experimental dimension is the **hold orientation** on the testbed:
+five discrete angles relative to the pull axis — **−45°, −22.5°, 0°, +22.5°, +45°**.
+Orientations beyond ±45° are not tested (frictional slip is certain).
+
+The **linear ratchet** captures peak hold displacement even when the hold slips
+mid-trial. The operator reads the ratchet position by eye after each trial; force
+at slip is computed offline from `F = k · x` (spring constant × displacement).
+**No force / displacement signal is fed into the policy or recorded in the zarr
+state vector** — it is logged out-of-band in the eval JSON / lab notebook only.
+
+Training demonstrations (teleoperated only — operator drives the arm + LEAP hand
+to grip the hold while it sits on the rig, no pull during collection):
+**10 episodes per orientation × 5 orientations = 50 episodes per hold**. Collect
+all 10 reps at one orientation before rotating the hold to the next angle.
+
+Evaluation: at least 4 pairs per orientation per grasp type (20 pairs total
+across the 5 orientations). Orientation is not stored in the zarr (policy
+doesn't consume it as input); randomize the orientation per eval trial and
+log it in the per-pair eval JSON / lab notebook instead.
+
+**Pull control:** position control is fine on the spring testbed. The spring
+is the natural force-limiter — good grasp pulls the hold against the spring
+until `k·x` exceeds the grip force (or max travel is reached); bad grasp
+slips off and the hold doesn't move. The ratchet captures the peak in either
+case, so slip force is just `F = k · x_ratchet`. The `--pull-stiffness` /
+`--pull-z-stiffness` / `--pull-z-bias` flags are present as a safety knob for
+edge cases (very strong grip on a very stiff spring) but are off by default
+and not needed for the standard protocol.
 
 ```bash
-# 5 cm pull, prompt for angle each trial (recommended — holds rotate)
-python3 evaluate.py --checkpoint ... --pull-dist 0.05
+# Spring testbed — pull angle fixed at 180°, 5 cm pull, position control
+python3 paired_eval.py --pull-dist 0.05 --pull-angle 180 \
+    --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
 
-# 5 cm pull, fixed angle for whole session
-python3 evaluate.py --checkpoint ... --pull-dist 0.05 --pull-angle 0
-
-# Same for paired_eval
-python3 paired_eval.py --pull-dist 0.05
+# Single model evaluation with spring testbed
+python3 evaluate.py --checkpoint ... --pull-dist 0.05 --pull-angle 180
 ```
+
+**Data-collection (teleop) — no `--pull-angle` flag.** Pulls happen only at
+evaluation. During collection, the operator teleoperates the grasp, ends the
+episode, and rotates the hold on the rig to the next of the 5 orientations
+after 10 reps.
 
 ### UDP packet format from Unity (28 values)
 
@@ -285,3 +352,8 @@ python3 paired_eval.py --pull-dist 0.05
 
 `leap_pip_dip_teleop.py` strips to 16 values (discards 16-27).
 `leap_thumb_ik_test.py` uses all 28.
+
+
+3 bad for the jug,
+0 bad for the crimp
+2 bad sloper

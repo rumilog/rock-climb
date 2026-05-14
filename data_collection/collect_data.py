@@ -228,6 +228,7 @@ class DataCollector:
         self.grasp_type = grasp_type  # string or None (will prompt if None)
         self.running = False
         self.recording = False
+        self.bad_episode_count = 0  # loaded from / persisted to bad_episodes.json
 
         self.cam_numbers = cam_numbers or CAMERA_NUMBERS
         self.cam_names = [f"cam{n}" for n in self.cam_numbers]
@@ -435,6 +436,32 @@ class DataCollector:
             print(f"  Camera {self.cam_numbers[i]}: {color.shape} OK"
                   f" (depth: {'yes' if has_depth else 'no'})")
 
+    def _bad_episodes_path(self):
+        return os.path.join(self.dataset_dir, "bad_episodes.json")
+
+    def _load_bad_episode_count(self):
+        import json
+        try:
+            with open(self._bad_episodes_path()) as f:
+                data = json.load(f)
+            return int(data.get(self.task_name, 0))
+        except (FileNotFoundError, KeyError, ValueError):
+            return 0
+
+    def _persist_bad_episode_count(self):
+        import json
+        path = self._bad_episodes_path()
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (FileNotFoundError, ValueError):
+            data = {}
+        data[self.task_name] = self.bad_episode_count
+        tmp = path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp, path)
+
     def _setup_dataset(self):
         os.makedirs(self.dataset_dir, exist_ok=True)
         zarr_path = os.path.join(self.dataset_dir, f"{self.task_name}.zarr")
@@ -447,12 +474,14 @@ class DataCollector:
             store_point_cloud=self.use_point_cloud,
             n_points=PC_N_POINTS,
         )
+        self.bad_episode_count = self._load_bad_episode_count()
         info = self.dataset.get_summary()
         if info["total_timesteps"] > 0:
             print(f"  Resuming: {info['num_episodes']} episodes, "
                   f"{info['total_timesteps']} timesteps")
         else:
             print("  New dataset created.")
+        print(f"  Bad episodes so far: {self.bad_episode_count}")
 
     # -------------------------------------------------------------------
     # State reading
@@ -612,7 +641,7 @@ class DataCollector:
             hold_ids = self.dataset.root["meta/hold_id"][:]
             hold_count = int(np.sum(hold_ids == self.hold_id))
         hold_name = HOLD_NAMES.get(self.hold_id, f"hold{self.hold_id}")
-        line1 = f"{hold_name}: {hold_count}/50"
+        line1 = f"{hold_name}: {hold_count}/50  bad: {self.bad_episode_count}"
         line2 = f"total: {total_count}"
         x = canvas.shape[1] - 160
         h = canvas.shape[0]
@@ -836,6 +865,14 @@ class DataCollector:
         if self.episode_buf is None or len(self.episode_buf) == 0:
             print("Nothing to save.")
             return
+        if quality == 0:
+            n = len(self.episode_buf)
+            self.bad_episode_count += 1
+            self.episode_buf = None
+            self.recording = False
+            self._persist_bad_episode_count()
+            print(f"BAD — discarded ({n} steps) | bad total: {self.bad_episode_count}")
+            return
         grasp_type = self.grasp_type or ""
         grasp_type_id = GRASP_TYPE_IDS.get(grasp_type, 0)
         self.dataset.append_episode(
@@ -863,6 +900,7 @@ class DataCollector:
         print("\n--- Dataset Info ---")
         for k, v in info.items():
             print(f"  {k}: {v}")
+        print(f"  bad_episodes_total: {self.bad_episode_count}")
         print()
 
     def _signal_handler(self, sig, frame):

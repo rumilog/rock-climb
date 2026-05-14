@@ -17,18 +17,22 @@ Design choices (following DP3 / DexCap):
 import numpy as np
 
 # Default workspace bounds in world frame (meters).
-# Calibrated 2026-03-16 with physical measurement:
-#   - Table surface: Z in [-0.020,  0.006]
-#   - Rock climbing hold (~6-7cm): Z up to  0.073m
-#   - Scale is ~1:1 (1 cm real ≈ 0.01 m world-Z)
-#   - z_max=0.30 covers a ~25cm-tall jug with margin
-# z_min=0.006 is at the table surface (table tops out at 0.006) to capture
-# the hold base and small details; still excludes table bulk (Z < 0.006).
-# Prior z_min=-0.02 caused 95% of 1024 FPS points to land on the table.
+# Calibrated 2026-05-11 for the spring displacement testbed (supersedes the
+# 2026-03-16 flat-table calibration):
+#   - Spring testbed seats each hold ~2 cm above the original table surface,
+#     so the hold base now sits at Z ≈ 0.027 m (vs. 0.006 m on the bare table)
+#   - z_max=0.40 gives headroom for the rig + a tall jug
+# History (do NOT regress past these):
+#   - z_min=-0.02 (table-era) → 95% of 1024 FPS points on the table; model
+#     ignored the PC. Unrecoverable; dataset had to be rebuilt.
+#   - z_min=0.006 (table-era, correct for flat-table collection)
+#   - z_min=0.027 (CURRENT, spring testbed era — verify with
+#     check_pc_sensitivity.py before each fresh data-collection session;
+#     centroid Z should sit above the rig, full hold geometry visible)
 DEFAULT_WORKSPACE_BOUNDS = {
     "x_min": 0.30, "x_max": 0.85,
     "y_min": -0.35, "y_max": 0.35,
-    "z_min": 0.006, "z_max": 0.30,
+    "z_min": 0.0265, "z_max": 0.40,
 }
 
 DEPTH_SCALE = 0.001  # RealSense default: uint16 mm → meters

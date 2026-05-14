@@ -82,7 +82,7 @@ Climbing holds are uniquely suited as a dexterous manipulation benchmark because
 - **DexGraspVLA**: AAAI 2026. [arXiv:2502.20900](https://arxiv.org/abs/2502.20900)
   - VLM high-level planner + diffusion low-level execution policy
   - VLM plans *what* to grasp (object identity/location), NOT *which grasp type from taxonomy*
-  - Closest to our two-part architecture but no taxonomy conditioning
+  - Closest to our architecture but no taxonomy conditioning
 - **CrossDex**: ICLR 2025.
   - Universal grasping across hand morphologies
   - Eigengrasp action space — not the same as functional taxonomy categories
@@ -114,6 +114,18 @@ Climbing holds are uniquely suited as a dexterous manipulation benchmark because
 - **Point cloud generation**: depth → XYZ via intrinsics, fused across 4 cameras
   into world frame using the extrinsics, then cropped to a calibrated workspace
   bounding box and downsampled with FPS
+- **Spring displacement testbed** (under construction, 2026-04-27): a linearly
+  constrained spring platform that seats each climbing hold and restricts
+  displacement to a single axis — 180° (toward the robot base). The testbed
+  enables repeatable disturbance testing with a consistent pull direction. Holds
+  are placed at 5 discrete orientations relative to the pull axis: 0°, ±22.5°,
+  ±45°. Orientations beyond ±45° are not tested because frictional slip is
+  certain at those angles regardless of grasp quality.
+- **Linear ratcheting mechanism**: integrated into the spring testbed; captures
+  the hold's maximum displacement even when it slips mid-trial. This converts
+  the evaluation from a binary pass/fail into a continuous displacement metric
+  (mm traveled before or during slip), enabling richer comparison across
+  grasp types and model variants.
 
 ### Climbing Holds
 
@@ -135,12 +147,17 @@ that require the same grasp strategy). This tests within-category generalization
 ### Data Collection Protocol
 
 **Per hold:**
-- Place hold on workspace surface in a random position and orientation
-- Vary position/orientation between episodes
-- Collect **50-80 good episodes per hold** via teleoperation
-- Each episode: approach → grasp → (optionally) lift/pull to confirm quality
+- Place hold on the spring testbed at each of the 5 orientations in turn
+- Collect **10 episodes per orientation × 5 orientations = 50 episodes per hold**
+- Each episode: approach → grasp → (optionally) pull to confirm quality
 - Mark quality as good/bad after each episode
-- Record grasp type label (crimp/sloper/pinch/jug) per episode
+- Record grasp type label (crimp/sloper/pinch/jug) and hold orientation (degrees) per episode
+
+⚠️ **Data recollection required (2026-04-27)**: The 200-episode dataset collected
+prior to the spring testbed design was gathered without systematic orientation
+variation and on a flat table (not the testbed). It must be recollected with holds
+seated on the spring testbed at the 5 evaluation orientations so that training and
+evaluation distributions match.
 
 **Episode structure:**
 1. Robot resets to home pose
@@ -244,7 +261,14 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 
 1. **Grasp success rate** — binary: did the hand achieve stable contact?
 2. **Grasp type accuracy** — did the robot use the correct grasp strategy?
-3. **Hold stability (disturbance rejection test)** — after policy convergence, the arm executes a Cartesian displacement of ~5 cm in a specified X,Y direction; trial is a success if the hold visibly co-displaces with the arm. Direction is chosen perpendicular to the hold's main axis each trial. This is the primary success criterion — equivalent to the standard "lift test" in manipulation papers but adapted for holds that cannot be picked up.
+3. **Hold stability (spring displacement test)** — after policy convergence, the arm
+   pulls the hold along the spring testbed's fixed linear axis (always 180°, toward
+   the robot base). Five hold orientations are tested per grasp type: 0°, ±22.5°,
+   ±45° relative to the pull axis. The **linear ratchet** captures the hold's peak
+   displacement even when it slips mid-trial, yielding a continuous displacement
+   metric (mm) rather than a binary outcome. Binary success (co-displacement ≥
+   threshold) is derived from this reading. This is the primary success criterion —
+   adapted from the standard lift test for holds that cannot be picked up.
 4. **Cross-category generalization** — success on held-out test_edge
 5. **Ablations**:
    - With vs without grasp type conditioning ← **LOAD-BEARING** — preliminary results confirm conditioning wins. `--no-grasp-conditioning` flag implemented 2026-04-14.
@@ -263,7 +287,14 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 2. Grasp type correctness (binary 0/1 — human judgment of hand configuration)
 3. Contact time (seconds from start to first contact)
 
-**Disturbance rejection test protocol:** `--pull-dist 0.05` flag in evaluate.py / paired_eval.py. After rollout converges, arm executes `goto_pose` displacement of 5 cm at a user-specified angle in the X,Y plane (prompted each trial since holds rotate). Human visually confirms whether the hold traveled with the arm. This is a binary, unambiguous observable event — equivalent to the standard lift test in pick-and-place papers. See CLAUDE.md "Pull test angle convention" for the angle coordinate system.
+**Spring displacement test protocol:** The spring testbed constrains hold motion to
+a single axis (180°, toward the robot base), so `--pull-angle 180` is fixed for
+all trials. The varying dimension is the **hold orientation** on the testbed:
+0°, ±22.5°, ±45° relative to the pull axis. For each grasp type, run at least
+4 trials per orientation (20 pairs total across the 5 orientations). Human
+visually confirms whether the hold co-displaced with the arm (binary). See
+CLAUDE.md "Pull test angle convention" for the coordinate diagram; the arm always
+moves at 180° (toward robot base) in that diagram.
 
 **Statistical tests:** Fisher's exact test for pairwise success rate comparisons.
 Report 95% Wilson confidence intervals on all success rates.
@@ -298,9 +329,11 @@ The combination of all four simultaneously is the novel contribution. Confidence
 - ✅ Min-max normalization to [-1, 1]
 - ✅ `--no-grasp-conditioning` ablation flag (drops GraspTypeEncoder branch)
 
-### Phase 3: Data Collection — COMPLETE
-- ✅ 200 episodes: 50 jug + 50 crimp + 50 sloper + 50 pinch
-- ✅ All marked good quality, 29,647 total timesteps
+### Phase 3: Data Collection — MUST RECOLLECT
+- ⚠️ 200 previously collected episodes (50 per type) are **invalid** for the new
+  spring testbed protocol — collected on a flat table without orientation variation
+- ⏳ Recollect: 50-80 episodes per grasp type on the spring testbed, covering all
+  5 orientations (0°, ±22.5°, ±45°) with roughly equal representation
 - ⏳ Held-out test hold (hold 4, test_edge) not yet collected
 
 ### Phase 4: Training and Evaluation — IN PROGRESS
@@ -340,37 +373,15 @@ jug (precision-insensitive, deep pocket with mm-scale slack, p=0.688 ns).
 This is the central mechanistic claim of the paper going forward. See
 `IMPLEMENTATION_LOG.md` Session 6 (2026-04-20) for numbers and figures.
 
-## 5. Two-Part Research Architecture (Updated 2026-03-16)
+## 5. Grasp Type Label — Manual Input
 
-The project is now explicitly decomposed into two independent research components:
+The grasp type label `g` is provided manually by the operator at both data collection
+time and deployment time. No vision classifier is implemented or planned. This keeps
+the paper focused on the mechanistic contribution (precision regularizer) rather than
+the deployment pipeline.
 
-### Part 1: Hold Identifier (Grasp-Type Classifier)
-**Goal:** Given a view of a climbing hold, predict the required grasp type (crimp / sloper / pinch / jug).
-
-**Approach: VLM-based classifier, trained separately**
-- Climbing hold categories map directly to the standard industry taxonomy — jug, sloper, crimp, pinch are the exact terms used by manufacturers, gear sites, and apps (Kilter Board, Moonboard). Substantial labeled image data exists online.
-- Zero-shot GPT-4V or Claude with a simple 4-class prompt is the starting point. If >90% accuracy on held-out holds, no fine-tuning needed.
-- If fine-tuning is needed: CLIP or lightweight VLM on online images + ~20-50 in-lab photos per class.
-- **Data collection for Part 1 is completely independent of the diffusion policy pipeline** — just photograph holds (no robot, no zarr, no teleoperation). Existing 37 episodes are unaffected.
-
-**Why not use the point cloud for this?**
-- 1024 workspace points gives ~30-150 points on the hold itself — sufficient for the diffusion policy (which only needs rough geometry for trajectory planning) but marginal for 4-class shape classification.
-- RGB images have far higher information density for this task and align with available online training data.
-- Coarse type discrimination (jug vs sloper is architecturally obvious) likely works; within-category subtleties are harder at 1024 pts.
-
-**Integration at deployment:**
-```
-[Camera RGB snapshot of hold] → Part 1 (VLM classifier) → grasp_type label
-                                                               ↓
-[Point cloud of hold] ─────────────────────────────────→ Part 2 (Diffusion policy) → robot action
-```
-
-### Part 2: Grasp Execution Policy (Diffusion Policy)
-**Goal:** Given a grasp type label + point cloud observation + robot state, execute the correct grasp.
-
-This is the existing DP3-style pipeline. Grasp type is provided as conditioning — either from Part 1 at deployment, or manually labeled during data collection and training. 200 episodes collected across all 4 grasp types.
-
-**Key design decision:** Grasp type is provided as input (not predicted from the point cloud), keeping the policy's job focused on *how* to grasp rather than *what* grasp to use.
+**Key design decision:** Grasp type is input (not predicted from the point cloud),
+keeping the policy's job focused on *how* to grasp rather than *what* grasp to use.
 
 ---
 

@@ -1,0 +1,349 @@
+{
+  "session_id": "20260422_144714",
+  "mode": "scripted",
+  "with_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_with_taxonomy/best.pt",
+  "no_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_no_taxonomy/best.pt",
+  "max_steps": 200,
+  "action_horizon": 8,
+  "inference_steps": 10,
+  "first_model": "WITHOUT_TAXONOMY",
+  "planned_batches": [
+    [
+      "sloper",
+      2,
+      20
+    ],
+    [
+      "pinch",
+      3,
+      20
+    ],
+    [
+      "crimp",
+      1,
+      20
+    ],
+    [
+      "jug",
+      0,
+      20
+    ]
+  ],
+  "batches": [
+    {
+      "batch": 0,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 20,
+      "completed_pairs": 8
+    }
+  ],
+  "pairs": [
+    {
+      "pair": 0,
+      "batch": 0,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.5385987162590027,
+            -0.07219160348176956,
+            0.03298763930797577
+          ],
+          "pull_angle_deg": 190.0
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.5385729074478149,
+            -0.07245390117168427,
+            0.03340926393866539
+          ],
+          "pull_angle_deg": 190.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T14:50:37.272705",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 1,
+      "batch": 0,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6154300570487976,
+            0.061093833297491074,
+            0.03526885434985161
+          ],
+          "pull_angle_deg": 180.0
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6122902035713196,
+            0.07043500244617462,
+            0.035245854407548904
+          ],
+          "pull_angle_deg": 180.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T14:52:54.633628",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 2,
+      "batch": 0,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.5705074071884155,
+            0.08485791087150574,
+            0.034827496856451035
+          ],
+          "pull_angle_deg": 270.0
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.5474242568016052,
+            0.07990632206201553,
+            0.03421390801668167
+          ],
+          "pull_angle_deg": 270.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T14:55:07.480566",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 3,
+      "batch": 0,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6649264693260193,
+            0.11205340176820755,
+            0.035138197243213654
+          ],
+          "pull_angle_deg": 225.0
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6674006581306458,
+            0.11428309977054596,
+            0.035272445529699326
+          ],
+          "pull_angle_deg": 225.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T14:57:25.435596",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 4,
+      "batch": 0,
+      "batch_pair": 4,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.48226290941238403,
+            0.13586591184139252,
+            0.03546682000160217
+          ],
+          "pull_angle_deg": 270.0
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.4770790934562683,
+            0.135879248380661,
+            0.03583895042538643
+          ],
+          "pull_angle_deg": 270.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T15:00:45.124865",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 5,
+      "batch": 0,
+      "batch_pair": 5,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6191983819007874,
+            -0.1616358458995819,
+            0.032639265060424805
+          ],
+          "pull_angle_deg": 135.0
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.6195082068443298,
+            -0.16281577944755554,
+            0.03259404003620148
+          ],
+          "pull_angle_deg": 135.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T15:04:00.774463",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 6,
+      "batch": 0,
+      "batch_pair": 6,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7015074491500854,
+            -0.11382599174976349,
+            0.03269708901643753
+          ],
+          "pull_angle_deg": 175.0
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.699859619140625,
+            -0.11321631073951721,
+            0.033146776258945465
+          ],
+          "pull_angle_deg": 175.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T15:06:46.282628",
+      "pull_dist_m": 0.1
+    },
+    {
+      "pair": 7,
+      "batch": 0,
+      "batch_pair": 7,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "bad",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.4169726073741913,
+            0.1590789556503296,
+            0.03790799528360367
+          ],
+          "pull_angle_deg": 315.0
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.4150247871875763,
+            0.16031067073345184,
+            0.03803928568959236
+          ],
+          "pull_angle_deg": 315.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T15:13:28.688993",
+      "pull_dist_m": 0.1
+    }
+  ],
+  "last_saved": "2026-04-22T15:13:32.951702"
+}

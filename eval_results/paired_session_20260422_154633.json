@@ -1,0 +1,69 @@
+{
+  "session_id": "20260422_154633",
+  "mode": "single",
+  "with_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_with_taxonomy/best.pt",
+  "no_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_no_taxonomy/best.pt",
+  "max_steps": 200,
+  "action_horizon": 8,
+  "inference_steps": 10,
+  "first_model": "WITHOUT_TAXONOMY",
+  "planned_batches": [
+    [
+      "sloper",
+      2,
+      1
+    ]
+  ],
+  "batches": [
+    {
+      "batch": 0,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 1,
+      "completed_pairs": 1
+    }
+  ],
+  "pairs": [
+    {
+      "pair": 0,
+      "batch": 0,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "bad",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.526604413986206,
+            -0.04032495990395546,
+            0.03412654995918274
+          ],
+          "pull_angle_deg": 180.0
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.5100294351577759,
+            -0.013607187196612358,
+            0.03380661830306053
+          ],
+          "pull_angle_deg": 180.0
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-04-22T15:50:18.519671",
+      "pull_dist_m": 0.1,
+      "pull_stiffness_Nm": 200.0
+    }
+  ],
+  "last_saved": "2026-04-22T15:50:18.519966"
+}

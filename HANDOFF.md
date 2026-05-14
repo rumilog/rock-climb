@@ -203,10 +203,11 @@ Key functions:
 
 **Workspace bounds `z_min` history (critical):**
 - `z_min=-0.02` (original) → 95% of 1024 points land on flat table, model ignores PC — **DO NOT USE**
-- `z_min=0.008` → captures hold but clips hold base detail
-- `z_min=0.006` → **correct value**, verified 2026-03-18: full hold geometry, Z centroid ≈ 0.034 m, zero table noise
+- `z_min=0.006` (table-era correct value) → full hold geometry on bare table, zero table noise. Correct for the original flat-table dataset.
+- `z_min=0.027` (CURRENT, spring testbed era, 2026-05-11) → rig deck lifts the hold ~2 cm above the original table surface; this `z_min` clips the rig deck while keeping the hold geometry intact.
+- `z_max` was bumped 0.30 → 0.40 in the same change to give headroom for the rig + tall jugs.
 
-Always run `check_pc_sensitivity.py` before collecting data to confirm PC looks correct.
+Always run `check_pc_sensitivity.py` with the spring testbed in place and a hold mounted **before** collecting data. Verify the hold geometry is captured and the rig deck is clipped.
 
 ### `train.py`
 
@@ -279,9 +280,20 @@ python3 VR_Teleoperation_Minimum.py
 
 # Terminal 2
 cd ~/Desktop/tele/data_collection
-python3 collect_data.py --hold 0 --point-cloud --grasp-type crimp
+python3 collect_data.py --hold 0 --point-cloud --grasp-type jug --task climbing_holds_rig
 # SPACE flow: arm out → SPACE → PC captured → arm back → SPACE → record → g/b/d
 ```
+
+> **`--task` IS REQUIRED ON THIS MACHINE.** Default `--task climbing_holds` writes
+> to `/mnt/ssd/rumi_tele_datasets/climbing_holds.zarr`, which is the **legacy
+> flat-table 200-ep dataset**. `collect_data.py` opens the zarr with `mode="a"`
+> ([episode_storage.py:131](data_collection/episode_storage.py#L131)) so the
+> default path will **silently append rig episodes onto the legacy arrays**,
+> mixing two distributions with no separator. Always pass
+> `--task climbing_holds_rig` (or another distinct name) for spring-testbed-era
+> collection, and use the SAME name across every session for the same dataset.
+> See CLAUDE.md "LEARNED → `--task` is the dataset name" for the full list of
+> existing zarrs and naming conventions.
 
 ### Training (Point Cloud / DP3-style)
 ```bash
@@ -352,7 +364,11 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
 **Dataset status (2026-03-18):**
 - `datasets/climbing_holds_legacy_image.zarr` — 44 eps, 30-dim, image-only. **VALID.** Use for RGB ablation baseline.
 - `datasets/climbing_holds_v2.zarr` — 73 eps, 30-dim, image-only. **VALID.** Legacy.
-- `datasets/climbing_holds.zarr` — **DOES NOT EXIST** — old 50-ep PC dataset was deleted (bad z_min). Will be recreated by fresh collection with z_min=0.006.
+- `datasets/climbing_holds.zarr` — flat-table 200-ep PC dataset; collected at the
+  prior z_min=0.006 calibration. **Invalid for the spring testbed protocol**
+  (training distribution doesn't match the elevated rig). Kept on disk for
+  reference / RGB-baseline ablation but will be replaced by a fresh collection
+  at z_min=0.027 with hold orientation logged per episode.
 
 **Next training run:** recollect 50 jug episodes → retrain PC model → verify robot uses PC (zero-PC vs real-PC actions must differ).
 
@@ -380,4 +396,4 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
 4. **Scale training** — full dataset across all hold types
 5. **Run ablations** — with/without grasp type conditioning; PC vs RGB baseline; 1024 vs other point counts
 
-**Research target:** RESEARCH_PLAN.md describes the full research design, related work citations, and the two-part architecture (VLM identifier + diffusion policy).
+**Research target:** RESEARCH_PLAN.md describes the full research design, related work citations, and experimental setup.

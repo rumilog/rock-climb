@@ -83,34 +83,40 @@ class LeapPipDipTeleop:
         # Set up signal handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        # Scaling to increase closing for PIP/DIP (method 2)
-        # Tune these if fist is under-closing
+        # === PINCH grasp tuning (restored from saved offsets, 2026-05-14) ===
+        # Per-grasp values are tracked in the memory file leap_hand_offsets.md.
+        # When switching grasp type for collection, swap this entire block.
+        # Pinch = thumb-against-fingers precision grip on narrow features.
+        # Reduced PIP per-finger (~0.7-0.8) tames over-curl; DIP slightly higher
+        # to keep fingertip contact. mcp_flex_post[3]=-0.7 + mcp_abd_zero[3]=10.0
+        # bring the thumb in to oppose the fingers.
         self.pip_scale = 2
         self.dip_scale = 2
         self.mcp_flex_scale = 1.0
         self.mcp_abd_scale = 1.0
         # Per-finger multipliers [Index, Middle, Pinky, Thumb]
-        # Note: these multiply with the global scales above (e.g. pip_scale * pip_scale_per_finger)
-        self.pip_scale_per_finger = [1.2, 3, 3, 1]
-        self.dip_scale_per_finger = [1.5, 1.6, 2, 1]
-        self.mcp_flex_scale_per_finger = [0.1, 0.1, 0.1, 5]
-        self.mcp_abd_scale_per_finger = [1.2, 1.2, 1.4, 5]
-        # Per-finger zero-offsets (degrees) to treat measured straight/neutral as 0
-        # Set to the EXACT measured value when the joint is straight (can be negative!)
-        # For example, if "straight" measures -20°, set offset to -20.0
+        self.pip_scale_per_finger      = [0.7, 0.8,  0.7, 1.0]
+        self.dip_scale_per_finger      = [1.2, 1.10, 1.0, 2.0]
+        self.mcp_flex_scale_per_finger = [1.7, 1.7,  1.7, 5.0]
+        self.mcp_abd_scale_per_finger  = [1.4, 1.2,  1.4, 5.0]
+        # Per-finger zero-offsets (degrees) — measured straight = 0
         # Order: [Index, Middle, Pinky, Thumb]
-        self.dip_zero_offset_deg_per_finger = [0.0, 0.0, 15.0, 40.0]
-        self.pip_zero_offset_deg_per_finger = [0.0, 0.0, 25.0, 50.0]
-        self.mcp_flex_zero_offset_deg_per_finger = [90.0, 0.0, 0.0, 80.0]
-        self.mcp_abd_zero_offset_deg_per_finger = [0.0, 0.0, 0.0, 30.0]
+        self.dip_zero_offset_deg_per_finger      = [0.0,  0.0, 15.0, 50.0]
+        self.pip_zero_offset_deg_per_finger      = [0.0,  0.0, 25.0, 40.0]
+        self.mcp_flex_zero_offset_deg_per_finger = [0.0,  0.0,  0.0, 40.0]
+        self.mcp_abd_zero_offset_deg_per_finger  = [10.0, 0.0, -10.0, 10.0]
 
-        # Post-scaling offsets (in RADIANS) - applied AFTER conversion and scaling
-        # Simple addition/subtraction to final motor commands for fine-tuning
+        # Post-scaling offsets (in RADIANS) — applied AFTER conversion and scaling
+        # Pinch distinctive feature: mcp_flex_post[3]=-0.7 pulls the thumb in
+        # toward the fingers for opposition.
+        # NOTE: don't put thumb DIP bias here — thumb DIP is sign-inverted at
+        # line 327-328 (`DIP = -DIP`), so a bias here goes the wrong direction.
+        # Use thumb_offsets[3] below (applied after the sign flip) instead.
         # Order: [Index, Middle, Pinky, Thumb]
-        self.dip_post_scale_offset_rad_per_finger = [1.57, 1.57, 1.57, 0.0]
-        self.pip_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.3]
-        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, 0.0]
-        self.mcp_abd_post_scale_offset_rad_per_finger = [0.0, 0.1, 0.2, -0.2]
+        self.dip_post_scale_offset_rad_per_finger      = [0.0, 0.0, 0.0,  0.0]
+        self.pip_post_scale_offset_rad_per_finger      = [0.0, 0.0, 0.0,  0.3]
+        self.mcp_flex_post_scale_offset_rad_per_finger = [0.0, 0.0, 0.0, -0.7]
+        self.mcp_abd_post_scale_offset_rad_per_finger  = [0.0, 0.1, 0.2,  0.0]
 
         # Max PIP closing angle (radians) per finger [Index, Middle, Pinky, Thumb]
         # Use np.inf for no limit. ~1.57 rad = 90°, ~1.75 rad = 100°
@@ -123,7 +129,10 @@ class LeapPipDipTeleop:
         # Thumb per-joint offsets (radians) [MCP_Abd, MCP_Flex, PIP, DIP]
         # MCP_Flex starts at +0.9 to clear the post-scale offset that otherwise
         # pins it at the hardware clip minimum.
-        self.thumb_offsets = np.array([0.0, 0.9, 0.0, 0.0])
+        # DIP=+0.5 (2026-05-14) biases the thumb DIP toward straight for pinch.
+        # If the joint goes the wrong way (more bent), flip sign to -0.5.
+        # If not enough effect, increase magnitude (0.8, 1.0).
+        self.thumb_offsets = np.array([0.0, 0.9, 0.0, -0.5])
 
     def init_leap_hand(self):
         """Initialize LEAP hand connection"""

@@ -1,0 +1,18 @@
+[
+  {
+    "trial": 0,
+    "hold_id": 2,
+    "hold_name": "sloper",
+    "rating": "skip",
+    "num_steps": 200,
+    "aborted": false,
+    "timestamp": "2026-04-22T15:25:12.693205",
+    "encoder_type": "point_cloud",
+    "model": "pc_with_taxonomy",
+    "pull_dist_m": 0.1,
+    "pull_angle_deg": 180.0,
+    "pull_stiffness_Nm": 400.0,
+    "grasp_type": "sloper",
+    "grasp_type_id": 1
+  }
+]

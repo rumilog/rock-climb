@@ -1,14 +1,21 @@
+% ============================================================
+% Core diffusion policy methods
+% ============================================================
+
 @inproceedings{chi2023diffusionpolicy,
   title     = {Diffusion Policy: Visuomotor Policy Learning via Action Diffusion},
-  author    = {Chi, Cheng and Xu, Zhenjia and Feng, Siyuan and Cousineau, Eric and Du, Yilun and Burchfiel, Benjamin and Tedrake, Russ and Song, Shuran},
+  author    = {Chi, Cheng and Xu, Zhenjia and Feng, Siyuan and Cousineau, Eric and
+               Du, Yilun and Burchfiel, Benjamin and Tedrake, Russ and Song, Shuran},
   booktitle = {Robotics: Science and Systems (RSS)},
   year      = {2023},
   url       = {https://arxiv.org/abs/2303.04137}
 }
 
 @inproceedings{ze2024dp3,
-  title     = {3D Diffusion Policy: Generalizable Visuomotor Policy Learning via Simple 3D Representations},
-  author    = {Ze, Yanjie and Zhang, Gu and Zhang, Kangning and Hu, Chenyuan and Wang, Muhan and Xu, Huazhe},
+  title     = {3D Diffusion Policy: Generalizable Visuomotor Policy Learning via
+               Simple 3D Representations},
+  author    = {Ze, Yanjie and Zhang, Gu and Zhang, Kangning and Hu, Chenyuan and
+               Wang, Muhan and Xu, Huazhe},
   booktitle = {Robotics: Science and Systems (RSS)},
   year      = {2024},
   url       = {https://arxiv.org/abs/2403.03954}
@@ -16,24 +23,17 @@
 
 @inproceedings{ze2024idp3,
   title     = {Generalizable Humanoid Manipulation with Improved 3D Diffusion Policies},
-  author    = {Ze, Yanjie and Chen, Zixuan and Wang, Wenhao and Chen, Tianyi and He, Xialin and Yuan, Ying and Peng, Xue Bin and Wu, Jiajun},
-  booktitle = {Conference on Robot Learning (CoRL)},  % VERIFY: originally listed as IROS 2025; CoRL 2024 is consistent with arXiv submission date (Oct 2024)
+  author    = {Ze, Yanjie and Chen, Zixuan and Wang, Wenhao and Chen, Tianyi and
+               He, Xialin and Yuan, Ying and Peng, Xue Bin and Wu, Jiajun},
+  booktitle = {Conference on Robot Learning (CoRL)},
   year      = {2024},
   url       = {https://arxiv.org/abs/2410.10803}
-}
-
-@inproceedings{qi2017pointnet,
-  title     = {PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation},
-  author    = {Qi, Charles R. and Su, Hao and Mo, Kaichun and Guibas, Leonidas J.},
-  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-  year      = {2017},
-  url       = {https://arxiv.org/abs/1612.00593}
 }
 
 @inproceedings{ho2020ddpm,
   title     = {Denoising Diffusion Probabilistic Models},
   author    = {Ho, Jonathan and Jain, Ajay and Abbeel, Pieter},
-  booktitle = {Advances in Neural Information Processing Systems},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
   year      = {2020},
   url       = {https://arxiv.org/abs/2006.11239}
 }
@@ -46,9 +46,86 @@
   url       = {https://arxiv.org/abs/2010.02502}
 }
 
+@article{ho2022cfg,
+  title   = {Classifier-Free Diffusion Guidance},
+  author  = {Ho, Jonathan and Salimans, Tim},
+  journal = {arXiv preprint arXiv:2207.12598},
+  year    = {2022},
+  url     = {https://arxiv.org/abs/2207.12598}
+}
+
+% ============================================================
+% 3D representations and point clouds
+% ============================================================
+
+@inproceedings{qi2017pointnet,
+  title     = {{PointNet}: Deep Learning on Point Sets for 3D Classification
+               and Segmentation},
+  author    = {Qi, Charles R. and Su, Hao and Mo, Kaichun and Guibas, Leonidas J.},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and
+               Pattern Recognition (CVPR)},
+  year      = {2017},
+  url       = {https://arxiv.org/abs/1612.00593}
+}
+
+@inproceedings{wang2024gendp,
+  title     = {{GenDP}: 3D Semantic Fields for Category-Level Generalizable
+               Diffusion Policy},
+  author    = {Wang, Yixuan and Yin, Guang and Huang, Binghao and Kelestemur, Tarik
+               and Wang, Jiuguang and Li, Yunzhu},
+  booktitle = {Conference on Robot Learning (CoRL)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2410.17488}
+}
+
+% ============================================================
+% Dexterous manipulation and data collection
+% ============================================================
+
+@inproceedings{wang2024dexcap,
+  title     = {{DexCap}: Scalable and Portable Mocap Data Collection System for
+               Dexterous Manipulation},
+  author    = {Wang, Chen and Shi, Haochen and Wang, Weizhuo and Zhang, Ruohan and
+               Fei-Fei, Li and Liu, C. Karen},
+  booktitle = {Robotics: Science and Systems (RSS)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2403.07788}
+}
+
+@inproceedings{wu2024unidexfpm,
+  title     = {{UniDexFPM}: Universal Dexterous Functional Pre-Grasp Manipulation
+               via Diffusion Policy},
+  author    = {Wu, Tianhao and Gan, Yunchong and Wu, Mingdong and Cheng, Jingbo and
+               Yang, Yaodong and Zhu, Yixin and Dong, Hao},
+  booktitle = {IEEE International Conference on Robotics and Automation (ICRA)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2403.12421}
+}
+
+@article{weng2024dexdiffuser,
+  title   = {{DexDiffuser}: Generating Dexterous Grasps with Diffusion Models},
+  author  = {Weng, Zehang and Lu, Haofei and Kragic, Danica and Lundell, Jens},
+  journal = {IEEE Robotics and Automation Letters},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2402.02989}
+}
+
+@inproceedings{crossdex2025,
+  title     = {Cross-Embodiment Dexterous Grasping with Reinforcement Learning},
+  author    = {Yuan, Haoqi and Zhou, Bohan and Fu, Yuhui and Lu, Zongqing},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2410.02479}
+}
+
+% ============================================================
+% Grasp taxonomy and type-conditioned generation
+% ============================================================
+
 @article{feix2016grasp,
-  title   = {The GRASP Taxonomy of Human Grasp Types},
-  author  = {Feix, Thomas and Romero, Javier and Schmiedmayer, Heinz-Bodo and Dollar, Aaron M. and Kragic, Danica},
+  title   = {The {GRASP} Taxonomy of Human Grasp Types},
+  author  = {Feix, Thomas and Romero, Javier and Schmiedmayer, Heinz-Bodo and
+             Dollar, Aaron M. and Kragic, Danica},
   journal = {IEEE Transactions on Human-Machine Systems},
   volume  = {46},
   number  = {1},
@@ -57,21 +134,48 @@
   doi     = {10.1109/THMS.2015.2470657}
 }
 
-@inproceedings{wang2024dexcap,
-  title     = {DexCap: Scalable and Portable Mocap Data Collection System for Dexterous Manipulation},
-  author    = {Wang, Chen and Shi, Haochen and Wang, Weizhuo and Zhang, Ruohan and Fei-Fei, Li and Liu, C. Karen},
+@inproceedings{dexonomy2025,
+  title     = {Dexonomy: Synthesizing All Dexterous Grasp Types in a Grasp Taxonomy},
+  author    = {Chen, Jiayi and Ke, Yubin and Peng, Lin and Wang, He},
   booktitle = {Robotics: Science and Systems (RSS)},
-  year      = {2024},
-  url       = {https://arxiv.org/abs/2403.07788}
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2504.18829}
 }
 
-@article{weng2024dexdiffuser,
-  title   = {DexDiffuser: Generating Dexterous Grasps with Diffusion Models},
-  author  = {Weng, Zehang and Lu, Haofei and Kragic, Danica and Lundell, Jens},
-  journal = {IEEE Robotics and Automation Letters},  % VERIFY: listed as RA-L 2024 in research plan
-  year    = {2024},
-  url     = {https://arxiv.org/abs/2402.02989}
+@inproceedings{tian2024graspasyousay,
+  title     = {Grasp as You Say: Language-guided Dexterous Grasp Generation},
+  author    = {Wei, Yi-Lin and Jiang, Jian-Jian and Xing, Chengyi and Tan, Xian-Tuo
+               and Wu, Xiao-Ming and Li, Hao and Cutkosky, Mark and Zheng, Wei-Shi},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2405.19291}
 }
+
+@article{omnidexvlg2024,
+  title   = {{OmniDexVLG}: Learning Dexterous Grasp Generation from Vision Language
+             Model-Guided Grasp Semantics, Taxonomy and Functional Affordance},
+  author  = {Zhang, Lei and Zheng, Diwen and Bai, Kaixin and Bing, Zhenshan and
+             Marton, Zoltan-Csaba and Chen, Zhaopeng and Knoll, Alois Christian and
+             Zhang, Jianwei},
+  journal = {arXiv preprint arXiv:2512.03874},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2512.03874}
+}
+
+@inproceedings{dexgraspvla2026,
+  title     = {{DexGraspVLA}: A Vision-Language-Action Framework Towards General
+               Dexterous Grasping},
+  author    = {Zhong, Yifan and Huang, Xuchuan and Li, Ruochong and Zhang, Ceyao and
+               Chen, Zhang and Guan, Tianrui and Zeng, Fanlian and Lui, Ka Num and
+               Ye, Yuyao and Liang, Yitao and Yang, Yaodong and Chen, Yuanpei},
+  booktitle = {AAAI Conference on Artificial Intelligence},
+  year      = {2026},
+  url       = {https://arxiv.org/abs/2502.20900}
+}
+
+% ============================================================
+% Optimisation
+% ============================================================
 
 @inproceedings{loshchilov2019adamw,
   title     = {Decoupled Weight Decay Regularization},
@@ -80,67 +184,3 @@
   year      = {2019},
   url       = {https://openreview.net/forum?id=Bkg6RiCqY7}
 }
-
-% FIXME: Verify author list from arXiv:2504.18829 before submission
-@inproceedings{dexonomy2025,
-  title     = {Dexonomy: Synthesizing All Dexterous Grasp Types in a Grasp Taxonomy},
-  author    = {FIXME: see arXiv:2504.18829},
-  booktitle = {Robotics: Science and Systems (RSS)},
-  year      = {2025},
-  url       = {https://arxiv.org/abs/2504.18829}
-}
-
-% FIXME: Verify author list from arXiv:2405.19291 before submission
-@inproceedings{tian2024graspasyousay,
-  title     = {Grasp as You Say: Language-guided Dexterous Grasp Generation},
-  author    = {FIXME: see arXiv:2405.19291},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2024},
-  url       = {https://arxiv.org/abs/2405.19291}
-}
-
-% FIXME: Verify author list from arXiv:2502.20900 before submission
-@inproceedings{dexgraspvla2026,
-  title     = {DexGraspVLA: A VLA-based Dexterous Grasping Policy under Diverse Contexts},
-  author    = {FIXME: see arXiv:2502.20900},
-  booktitle = {AAAI Conference on Artificial Intelligence},
-  year      = {2026},
-  url       = {https://arxiv.org/abs/2502.20900}
-}
-
-% FIXME: Verify author list and title from arXiv:2512.03874 before submission
-@article{omnidexvlg2024,
-  title   = {OmniDexVLG: Omnidirectional Dexterous VLM-Guided Grasping},
-  author  = {FIXME: see arXiv:2512.03874},
-  journal = {arXiv preprint arXiv:2512.03874},
-  year    = {2024},
-  url     = {https://arxiv.org/abs/2512.03874}
-}
-
-% FIXME: Verify author list from arXiv:2403.12421 before submission
-@inproceedings{wu2024unidexfpm,
-  title     = {UniDexFPM: Universal Dexterous Functional Pre-Grasp Manipulation via Diffusion Policy},
-  author    = {FIXME: see arXiv:2403.12421},
-  booktitle = {IEEE International Conference on Robotics and Automation (ICRA)},
-  year      = {2024},
-  url       = {https://arxiv.org/abs/2403.12421}
-}
-
-% FIXME: Verify author list from arXiv:2410.17488 before submission
-@inproceedings{wang2024gendp,
-  title     = {GenDP: 3D Semantic Fields for Category-Level Generalizable Diffusion Policy},
-  author    = {FIXME: see arXiv:2410.17488},
-  booktitle = {Conference on Robot Learning (CoRL)},
-  year      = {2024},
-  url       = {https://arxiv.org/abs/2410.17488}
-}
-
-% FIXME: Find arXiv number and author list for CrossDex (ICLR 2025) before submission
-@inproceedings{crossdex2025,
-  title     = {CrossDex: Cross-Embodiment Dexterous Grasping},
-  author    = {FIXME: find arXiv for CrossDex ICLR 2025},
-  booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2025},
-  url       = {FIXME}
-}
-

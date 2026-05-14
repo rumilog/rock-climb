@@ -1,36 +1,76 @@
 # TODO
 
-## Current State (2026-04-20)
+## Current State (2026-05-11)
 
 - ✅ Point cloud pipeline implemented end-to-end
-- ✅ Workspace bounds calibrated: `z_min=0.006` verified with `check_pc_sensitivity.py`
-- ✅ **200 episodes collected** — 50 per grasp type, all marked good quality
-  - Hold 0 (edge_A): 50 jug episodes
-  - Hold 1 (edge_B): 50 crimp episodes
-  - Hold 2 (sloper): 50 sloper episodes
-  - Hold 3 (pinch): 50 pinch episodes
 - ✅ `--no-grasp-conditioning` flag implemented in train.py (ablation-ready)
 - ✅ Per-grasp LEAP hand offsets saved in memory (jug, sloper, pinch, crimp)
 - ✅ DIP/PIP max clamp added to `leap_pip_dip_teleop.py`
 - ✅ Verified training fits on local RTX 2080 Ti (0.8 GB VRAM, ~11 hours for 3000 epochs)
-- ✅ Both models trained (finished 2026-04-16): `checkpoints/pc_with_taxonomy/best.pt`, `checkpoints/pc_no_taxonomy/best.pt`
-- ✅ Workspace z_min updated to 0.010 in `point_cloud_utils.py` (2026-04-20)
-- 🔄 **Paired evaluation IN PROGRESS** — session `paired_session_20260417_131412.json`
-  - Crimp (hold 1, edge_B): **20/20 pairs complete**
-  - Jug (hold 0, edge_A): **20/20 pairs complete**
-  - Sloper (hold 2): **IN PROGRESS** (3+ pairs done as of 2026-04-20 morning)
-  - Pinch (hold 3): **not started**
+- ✅ Spring displacement testbed built (linear single-axis pull toward robot base, ratcheting peak-displacement readout)
+- ✅ Workspace bounds re-calibrated for spring testbed: `z_min=0.027`, `z_max=0.40` in `point_cloud_utils.py` (was `z_min=0.006`, `z_max=0.30` on the bare table)
+- ✅ Cartesian impedance pull flags available in `evaluate.py` / `paired_eval.py` as an optional safety knob (`--pull-stiffness`, `--pull-z-stiffness`, `--pull-z-bias`); not used by default — position control is the standard for the spring testbed
+- ⚠️ Both prior checkpoints (`pc_with_taxonomy/best.pt`, `pc_no_taxonomy/best.pt`) are **superseded** — trained on the flat-table 200-ep dataset which doesn't match the rig distribution
+- ⚠️ The 200-episode flat-table dataset is **invalid** for the new protocol (kept on disk for RGB ablation only)
+
+**Plan reframe (2026-05-11):** training and evaluation both happen on the spring
+testbed. Training = teleoperate the LEAP hand + Franka to grip the hold (no pull
+during collection); 10 episodes × 5 orientations (−45°, −22.5°, 0°, +22.5°, +45°)
+× per hold = 50 episodes per hold. The 5 orientations are pure pose diversity in
+the training distribution — they are NOT stored in the zarr or consumed by the
+policy. Eval = run the policy to grasp, then pull at 180° (the rig's fixed axis)
+in position control. The linear ratchet records the peak displacement; slip
+force is computed offline via `F = k · x`. No force or displacement signal is
+fed into the policy — both live only in the eval JSON / lab notebook.
+
+Per-orientation eval analysis (if wanted) is achieved by randomizing the hold
+orientation per eval trial and logging it in `paired_eval.py` at the time of
+each pair — not by storing it in the training zarr.
 
 ---
 
 ## Immediate Next Steps
 
-1. **Finish current paired eval** — complete sloper (20 pairs) and pinch (20 pairs)
+1. **Sanity-check the PC pipeline on the rig** — with a hold mounted at 0°, run
+   `check_pc_sensitivity.py` and confirm: centroid Z above the rig deck, full
+   hold geometry captured, centroids shift cm-scale across the 5 orientations.
+
+2. **Recollect training data** — 10 episodes × 5 orientations = 50 episodes per hold.
+   Collect all 10 reps at one orientation before rotating to the next.
+
+   **`--task climbing_holds_rig` is MANDATORY** — the default `--task climbing_holds`
+   points at the legacy flat-table 200-ep zarr and would silently append rig data
+   onto it (zarr is opened `mode="a"`). Use the same `--task` name across every
+   session for this dataset so all 4 hold/grasp combos accumulate into one zarr.
+
    ```bash
-   python3 paired_eval.py --resume eval_results/paired_session_20260417_131412.json
+   # Jug (hold 0, edge_A gripped as jug):
+   python3 collect_data.py --hold 0 --point-cloud --grasp-type jug --task climbing_holds_rig
+   # Crimp (hold 1, edge_B):
+   python3 collect_data.py --hold 1 --point-cloud --grasp-type crimp --task climbing_holds_rig
+   # Sloper (hold 2):
+   python3 collect_data.py --hold 2 --point-cloud --grasp-type sloper --task climbing_holds_rig
+   # Pinch (hold 3):
+   python3 collect_data.py --hold 3 --point-cloud --grasp-type pinch --task climbing_holds_rig
+   # rotate the hold on the rig between blocks of 10 episodes within each session
    ```
 
-2. **Wrong-label ablation** — after main eval is done
+4. **Retrain both models** — with and without taxonomy conditioning on the new
+   rig-collected dataset. Same hyperparams; check the audit table below for any
+   that need to scale with the (likely larger) dataset size.
+
+5. **Run paired evaluation with spring testbed** — `--pull-angle 180` fixed,
+   position control; ≥4 pairs per orientation per grasp type = 20 pairs/type,
+   100 pairs total. Randomize the hold orientation per trial (or step through
+   the 5 angles systematically) and log it per pair. After each trial, read
+   the ratchet displacement (mm) by eye and log it alongside the binary success
+   rating; compute slip force offline via `F = k · x`.
+   ```bash
+   python3 paired_eval.py --pull-dist 0.05 --pull-angle 180 \
+       --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+   ```
+
+5. **Wrong-label ablation** — after main eval is done
    - Run paired_eval with deliberately incorrect taxonomy labels
    - e.g. give `grasp_type=jug` when facing the crimp hold, `grasp_type=crimp` when facing the sloper
    - Hypothesis: model executes wrong grasp type → fails
@@ -181,13 +221,6 @@ Enter the pull angle when prompted (see CLAUDE.md "Pull test angle convention" f
 3. **Point cloud visualizations**: example PCs for each hold type
 4. **Architecture diagram**: PointNet + State + GraspType → Fuse → U-Net
 5. **Novelty gap table**: our method vs DP3, Dexonomy, etc. across 4 axes
-
----
-
-## Part 1: Hold Identifier (Separate Workstream — Future)
-
-**Goal:** VLM-based classifier that predicts grasp type from an RGB image of a hold.
-**Status:** Not started. Existing Part 2 data unaffected — this is fully independent.
 
 ---
 
