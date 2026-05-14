@@ -171,8 +171,9 @@ class PolicyEvaluator:
     def __init__(self, ckpt_path, hold_id=0, n_trials=5, max_steps=200,
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10, grasp_type=None, zero_pc=False,
-                 pull_dist=None, pull_angle=None, pull_stiffness=None,
-                 pull_z_stiffness=None, pull_z_bias=0.0):
+                 pull_dist=None, pull_stiffness=4000.0,
+                 pull_lateral_stiffness=100.0, pull_z_stiffness=100.0,
+                 pull_z_bias=0.0):
         self.hold_id = hold_id
         self.ckpt_name = Path(ckpt_path).parent.name  # e.g. "pc_with_taxonomy"
         self.n_trials = n_trials
@@ -181,11 +182,11 @@ class PolicyEvaluator:
         self.dry_run = dry_run
         self.zero_pc = zero_pc
         self.num_inference_steps = num_inference_steps
-        self.pull_dist = pull_dist        # meters; None = pull test disabled
-        self.pull_angle = pull_angle      # degrees; None = prompt per trial
-        self.pull_stiffness = pull_stiffness      # N/m; None = position control, float = impedance
-        self.pull_z_stiffness = pull_z_stiffness  # N/m; None = same as pull_stiffness
-        self.pull_z_bias = pull_z_bias            # meters upward bias on Z target to counteract LEAP hand weight
+        self.pull_dist             = pull_dist              # meters; None = pull test disabled
+        self.pull_stiffness        = pull_stiffness         # N/m; X (pull axis) stiffness
+        self.pull_lateral_stiffness = pull_lateral_stiffness  # N/m; Y (lateral) stiffness
+        self.pull_z_stiffness      = pull_z_stiffness       # N/m; Z (vertical) stiffness
+        self.pull_z_bias           = pull_z_bias            # meters upward Z bias to counter LEAP hand weight
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -517,11 +518,16 @@ class PolicyEvaluator:
             except Exception:
                 pass
 
-    def _execute_pull(self, angle_deg):
-        """Move arm in a straight line in the X,Y plane by self.pull_dist meters.
+    def _execute_pull(self, angle_deg=180.0):
+        """Pull arm toward robot base (default 180° = -X direction) by self.pull_dist meters.
 
-        Called after live control is already stopped. The arm is left at the
-        displaced pose; the next _reset_robot() call will bring it home.
+        Uses impedance control with differential per-axis stiffness:
+          kx (pull axis, default 4000 N/m) — stiff, drives the motion
+          ky (lateral,   default  100 N/m) — compliant, natural side flex
+          kz (vertical,  default  100 N/m) — compliant, natural up/down flex
+
+        Called after live control is already stopped. Arm is left at the displaced
+        pose; the next _reset_robot() call brings it home.
         """
         if self.fa is None:
             print("  [pull] No FrankaArm — skipping")
@@ -538,19 +544,16 @@ class PolicyEvaluator:
         current_pose = self.fa.get_pose()
         target_pose = copy.deepcopy(current_pose)
         target_pose.translation = current_pose.translation + np.array([dx, dy, self.pull_z_bias])
-        mode_str = (f"impedance k={self.pull_stiffness} N/m"
-                    if self.pull_stiffness is not None else "position control")
+        kx = float(self.pull_stiffness)
+        ky = float(self.pull_lateral_stiffness)
+        kz = float(self.pull_z_stiffness)
         print(f"  [pull] {self.pull_dist*100:.1f} cm at {angle_deg:.0f}° "
-              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) [{mode_str}] ...")
+              f"(dx={dx*100:.1f}, dy={dy*100:.1f} cm) "
+              f"[kx={kx:.0f} / ky={ky:.0f} / kz={kz:.0f} N/m] ...")
         try:
-            if self.pull_stiffness is not None:
-                k = float(self.pull_stiffness)
-                kz = float(self.pull_z_stiffness) if self.pull_z_stiffness is not None else k
-                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False,
-                                  buffer_time=0.2, use_impedance=True,
-                                  cartesian_impedances=[k, k, kz, 10.0, 10.0, 10.0])
-            else:
-                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
+            self.fa.goto_pose(target_pose, duration=5.0, dynamic=False,
+                              buffer_time=0.2, use_impedance=True,
+                              cartesian_impedances=[kx, ky, kz, 10.0, 10.0, 10.0])
         except Exception as e:
             print(f"  [pull] WARNING: move failed: {e}")
 
@@ -757,19 +760,31 @@ class PolicyEvaluator:
             self._stop_live_control()
 
         # Pull test (only if --pull-dist was set)
+        ratchet_info = None
         pull_angle_used = None
         if self.pull_dist is not None and not self.dry_run and self.fa is not None:
-            if self.pull_angle is not None:
-                pull_angle_used = self.pull_angle
-            else:
-                while True:
-                    try:
-                        raw = input("  Pull angle (degrees, X=0 Y=90): ").strip()
-                        pull_angle_used = float(raw)
-                        break
-                    except ValueError:
-                        print("  Enter a number.")
+            pull_angle_used = getattr(self, "pull_angle", 180.0) or 180.0
             self._execute_pull(pull_angle_used)
+            # Ratchet reading — operator enters tooth count, script computes displacement + force
+            print("  Ratchet teeth (0–11, 0=no movement, Enter=skip): ", end="", flush=True)
+            try:
+                raw = input().strip()
+                if raw.isdigit():
+                    teeth = int(raw)
+                    if 0 <= teeth <= 11:
+                        disp_mm   = round(teeth * 9.3, 1)
+                        disp_in   = disp_mm / 25.4
+                        force_lbf = round(2 * (0.59 + 0.8 * disp_in), 3)
+                        force_N   = round(force_lbf * 4.44822, 2)
+                        ratchet_info = {
+                            "teeth":           teeth,
+                            "displacement_mm": disp_mm,
+                            "force_lbf":       force_lbf,
+                            "force_N":         force_N,
+                        }
+                        print(f"    → {disp_mm:.1f} mm  |  F ≈ {force_lbf:.2f} lbf ({force_N:.1f} N)")
+            except (EOFError, ValueError):
+                pass
 
         print("Trial done. Rate the grasp:  g = good,  b = bad,  s = skip")
         while True:
@@ -797,11 +812,15 @@ class PolicyEvaluator:
             "encoder_type": self.encoder_type,
             "model": self.ckpt_name,
         }
-        if pull_angle_used is not None:
-            result["pull_dist_m"] = self.pull_dist
-            result["pull_angle_deg"] = pull_angle_used
-            if self.pull_stiffness is not None:
-                result["pull_stiffness_Nm"] = self.pull_stiffness
+        if self.pull_dist is not None:
+            result["pull_dist_m"]    = self.pull_dist
+            result["pull_angle_deg"] = pull_angle_used if pull_angle_used is not None else 180.0
+            result["pull_stiffness"] = {
+                "kx": self.pull_stiffness,
+                "ky": self.pull_lateral_stiffness,
+                "kz": self.pull_z_stiffness,
+            }
+            result["ratchet"] = ratchet_info
         if self.use_pc:
             result["grasp_type"] = self.grasp_type
             result["grasp_type_id"] = self.grasp_type_id
@@ -899,27 +918,29 @@ def main():
                         help="Feed all-zeros as the point cloud instead of capturing. "
                              "Use to test whether the model ignores the PC input.")
     parser.add_argument("--pull-dist", type=float, default=None,
-                        help="If set, execute a pull test after each rollout: move the arm "
-                             "this many meters in the X,Y plane and rate whether the hold "
-                             "moved with it. E.g. --pull-dist 0.05 for a 5 cm pull.")
-    parser.add_argument("--pull-angle", type=float, default=None,
-                        help="Direction of the pull in degrees (0=+X, 90=+Y). "
-                             "If omitted, you will be prompted to enter it before each pull.")
-    parser.add_argument("--pull-stiffness", type=float, default=None,
-                        help="If set, use Cartesian impedance control during the pull with "
-                             "this translational stiffness in N/m (e.g. 50). The arm will "
-                             "only exert a bounded force, so a bad grasp won't be dragged. "
-                             "If omitted, position control is used (arm exerts unlimited force).")
-    parser.add_argument("--pull-z-stiffness", type=float, default=None,
-                        help="Z-axis (height) stiffness in N/m during impedance pull. "
-                             "If omitted, uses --pull-stiffness for all axes. "
-                             "Set lower than --pull-stiffness to allow vertical compliance "
-                             "while keeping X/Y stiff (e.g. --pull-stiffness 200 --pull-z-stiffness 20).")
+                        help="If set, execute a spring-testbed pull test after each rollout: "
+                             "arm moves this many meters toward robot base (180°, -X). "
+                             "Standard value: 0.105 (10.5 cm, 11 ratchet teeth). "
+                             "After the pull, enter the ratchet tooth count (0–11); "
+                             "the script computes and logs displacement + slip force.")
+    parser.add_argument("--pull-angle", type=float, default=180.0,
+                        help="Direction of the pull in degrees (0=+X, 90=+Y, 180=-X toward robot). "
+                             "Default 180° (spring testbed standard). "
+                             "Only change for non-testbed use.")
+    parser.add_argument("--pull-stiffness", type=float, default=4000.0,
+                        help="X-axis (pull direction) Cartesian impedance stiffness in N/m. "
+                             "Default 4000. At 4000 vs spring k≈280 N/m, arm reaches ~97 mm "
+                             "for a perfect grip (≈10 ratchet teeth).")
+    parser.add_argument("--pull-lateral-stiffness", type=float, default=100.0,
+                        help="Y-axis (lateral) Cartesian impedance stiffness in N/m. "
+                             "Default 100 — compliant, allows natural side-to-side hand flex.")
+    parser.add_argument("--pull-z-stiffness", type=float, default=100.0,
+                        help="Z-axis (vertical) Cartesian impedance stiffness in N/m. "
+                             "Default 100 — compliant, allows natural up/down hand flex.")
     parser.add_argument("--pull-z-bias", type=float, default=0.0,
-                        help="Upward Z offset (meters) added to the target pose during impedance pull. "
-                             "Compensates for LEAP hand weight not in Franka gravity model — "
-                             "prevents arm from sagging into hold. Tune empirically: start at 0.02 "
-                             "and increase until arm neither droops nor presses down. (default: 0.0)")
+                        help="Upward Z offset (meters) added to pull target pose. "
+                             "Compensates for LEAP hand weight not in Franka gravity model. "
+                             "Tune empirically: start at 0.02. (default: 0.0)")
     args = parser.parse_args()
 
     global MAX_JOINT_STEP_RAD
@@ -937,11 +958,13 @@ def main():
         grasp_type=args.grasp_type,
         zero_pc=args.zero_pc,
         pull_dist=args.pull_dist,
-        pull_angle=args.pull_angle,
         pull_stiffness=args.pull_stiffness,
+        pull_lateral_stiffness=args.pull_lateral_stiffness,
         pull_z_stiffness=args.pull_z_stiffness,
         pull_z_bias=args.pull_z_bias,
     )
+    # Store pull_angle on the evaluator for _execute_pull default override
+    evaluator.pull_angle = args.pull_angle
 
     def _cleanup(signum=None, frame=None):
         print("\nCaught interrupt — cleaning up...")

@@ -294,17 +294,38 @@ after the policy converges. The angle is entered in degrees (0–360):
 ### Spring testbed protocol (active plan as of 2026-05-11)
 
 The spring displacement testbed constrains hold motion to a single axis fixed at
-**180° (toward the robot base)**. Always pass `--pull-angle 180`.
+**180° (toward the robot base, -X direction)**. The pull angle is **hardcoded at
+180° in both eval scripts** — no `--pull-angle` flag needed or accepted by
+`paired_eval.py`; `evaluate.py` still accepts it for non-testbed use but defaults
+to 180°.
 
 The varying experimental dimension is the **hold orientation** on the testbed:
 five discrete angles relative to the pull axis — **−45°, −22.5°, 0°, +22.5°, +45°**.
 Orientations beyond ±45° are not tested (frictional slip is certain).
 
-The **linear ratchet** captures peak hold displacement even when the hold slips
-mid-trial. The operator reads the ratchet position by eye after each trial; force
-at slip is computed offline from `F = k · x` (spring constant × displacement).
-**No force / displacement signal is fed into the policy or recorded in the zarr
-state vector** — it is logged out-of-band in the eval JSON / lab notebook only.
+**Ratchet and force measurement:** the linear ratchet captures the hold's peak
+displacement even when it slips mid-trial. After each pull, the script prompts for
+the ratchet tooth count (0–11). Each tooth = **9.3 mm**; max travel = 11 teeth =
+102.3 mm. The two springs in parallel are empirically calibrated as:
+
+```
+F_total = 2 × (0.59 + 0.8 × x_in)  [lbf]   where x_in = displacement_mm / 25.4
+        = (1.18 + 1.6 × x_in) × 4.448       [N]
+```
+
+| Teeth | Disp (mm) | F (lbf) | F (N)  |
+|-------|-----------|---------|--------|
+| 0     | 0         | 1.18    | 5.2    |
+| 1     | 9.3       | 1.77    | 7.9    |
+| 3     | 27.9      | 2.94    | 13.1   |
+| 5     | 46.5      | 4.11    | 18.3   |
+| 7     | 65.1      | 5.28    | 23.5   |
+| 9     | 83.7      | 6.45    | 28.7   |
+| 11    | 102.3     | 7.62    | 33.9   |
+
+**No force / displacement signal is fed into the policy or stored in the zarr** —
+it lives only in the eval JSON (`ratchet.teeth`, `ratchet.displacement_mm`,
+`ratchet.force_lbf`, `ratchet.force_N` fields per trial).
 
 Training demonstrations (teleoperated only — operator drives the arm + LEAP hand
 to grip the hold while it sits on the rig, no pull during collection):
@@ -316,25 +337,34 @@ across the 5 orientations). Orientation is not stored in the zarr (policy
 doesn't consume it as input); randomize the orientation per eval trial and
 log it in the per-pair eval JSON / lab notebook instead.
 
-**Pull control:** position control is fine on the spring testbed. The spring
-is the natural force-limiter — good grasp pulls the hold against the spring
-until `k·x` exceeds the grip force (or max travel is reached); bad grasp
-slips off and the hold doesn't move. The ratchet captures the peak in either
-case, so slip force is just `F = k · x_ratchet`. The `--pull-stiffness` /
-`--pull-z-stiffness` / `--pull-z-bias` flags are present as a safety knob for
-edge cases (very strong grip on a very stiff spring) but are off by default
-and not needed for the standard protocol.
+**Pull control:** impedance control with **differential per-axis stiffness**:
+- X (pull axis, -X direction): `kx = 4000 N/m` — stiff, drives the 10.5 cm motion
+- Y (lateral): `ky = 100 N/m` — compliant, allows natural hand flex side-to-side
+- Z (vertical): `kz = 100 N/m` — compliant, allows natural hand flex up/down
+
+Defaults are baked in; override with `--pull-stiffness` (kx), `--pull-lateral-stiffness`
+(ky), `--pull-z-stiffness` (kz), `--pull-z-bias` (upward Z offset to counter LEAP
+hand weight). At kx=4000, a perfect grip equilibrates at ~97 mm (≈10 ratchet teeth)
+due to spring back-force; this is expected — readings ≥ 9 = strong grip.
 
 ```bash
-# Spring testbed — pull angle fixed at 180°, 5 cm pull, position control
-python3 paired_eval.py --pull-dist 0.05 --pull-angle 180 \
-    --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+# Full evaluation session — all 5 orientations per hold, 4 pairs each (80 pairs total)
+# Format: grasp:hold:pairs:orientation_deg
+python3 paired_eval.py --pull-dist 0.105 --batches \
+  jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
+  crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
+  sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
+  pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
+
+# Single hold session (one hold, all 5 orientations):
+python3 paired_eval.py --pull-dist 0.105 --batches \
+  jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45
 
 # Single model evaluation with spring testbed
-python3 evaluate.py --checkpoint ... --pull-dist 0.05 --pull-angle 180
+python3 evaluate.py --checkpoint ... --pull-dist 0.105
 ```
 
-**Data-collection (teleop) — no `--pull-angle` flag.** Pulls happen only at
+**Data-collection (teleop) — no `--pull-dist` flag.** Pulls happen only at
 evaluation. During collection, the operator teleoperates the grasp, ends the
 episode, and rotates the hold on the rig to the next of the 5 orientations
 after 10 reps.

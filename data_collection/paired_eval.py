@@ -205,8 +205,9 @@ class PairedEvaluator:
                  max_steps=200, action_horizon=8,
                  dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10,
-                 pull_dist=None, pull_angle=None, pull_stiffness=None,
-                 pull_z_stiffness=None, pull_z_bias=0.0):
+                 pull_dist=None, pull_stiffness=4000.0,
+                 pull_lateral_stiffness=100.0, pull_z_stiffness=100.0,
+                 pull_z_bias=0.0):
 
         # Batch state — set at start of each batch via _set_batch()
         self.hold_id            = None
@@ -217,11 +218,11 @@ class PairedEvaluator:
         self.action_horizon     = action_horizon
         self.dry_run            = dry_run
         self.num_inf_steps      = num_inference_steps
-        self.pull_dist          = pull_dist       # meters; None = pull test disabled
-        self.pull_angle         = pull_angle      # degrees; None = prompt per trial
-        self.pull_stiffness     = pull_stiffness      # N/m; None = position control, float = impedance
-        self.pull_z_stiffness   = pull_z_stiffness    # N/m; None = same as pull_stiffness
-        self.pull_z_bias        = pull_z_bias          # meters upward bias on Z target to counteract LEAP hand weight
+        self.pull_dist              = pull_dist              # meters; None = pull test disabled
+        self.pull_stiffness         = pull_stiffness         # N/m; X (pull axis) stiffness
+        self.pull_lateral_stiffness = pull_lateral_stiffness  # N/m; Y (lateral) stiffness
+        self.pull_z_stiffness       = pull_z_stiffness       # N/m; Z (vertical) stiffness
+        self.pull_z_bias            = pull_z_bias            # meters upward Z bias to counter LEAP hand weight
         self.results_dir        = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -337,10 +338,13 @@ class PairedEvaluator:
         print(f"    First model (pair 1)   : {self._first_model}")
         if self._planned_batches:
             print(f"    Planned batches        :")
-            for i, (gt, hid, n) in enumerate(self._planned_batches):
+            for i, spec in enumerate(self._planned_batches):
+                gt, hid, n = spec[0], spec[1], spec[2]
+                orient = spec[3] if len(spec) > 3 else None
+                orient_tag = f" @ {orient}°" if orient is not None else ""
                 done = by_idx.get(i, {}).get("completed_pairs", 0)
                 marker = "✓" if done >= n else ("…" if done > 0 else " ")
-                print(f"      [{marker}] batch {i+1}: {gt}/hold={hid}  "
+                print(f"      [{marker}] batch {i+1}: {gt}/hold={hid}{orient_tag}  "
                       f"{done}/{n} pairs done")
 
     def _setup_franka(self):
@@ -453,19 +457,24 @@ class PairedEvaluator:
             time.sleep(0.5)
         return pc
 
-    def _execute_pull(self, angle_deg):
-        """Move arm in a straight line in the X,Y plane by self.pull_dist meters.
+    def _execute_pull(self):
+        """Pull arm 10.5 cm toward robot base (180° = -X direction).
 
-        Called after live control is already stopped. The arm is left at the
-        displaced pose; the next _reset_robot() call will bring it home.
+        Uses impedance control with differential per-axis stiffness:
+          kx (pull axis, default 4000 N/m) — stiff, drives the motion
+          ky (lateral,   default  100 N/m) — compliant, natural side flex
+          kz (vertical,  default  100 N/m) — compliant, natural up/down flex
+
+        Called after live control is already stopped. Arm is left at the displaced
+        pose; the next _reset_robot() call brings it home.
         """
         if self.fa is None:
             print("  [pull] No FrankaArm — skipping")
             return
         import copy
-        angle_rad = np.deg2rad(angle_deg)
-        dx = self.pull_dist * np.cos(angle_rad)
-        dy = self.pull_dist * np.sin(angle_rad)
+        # Spring testbed: pull is always 180° (-X, toward robot base)
+        dx = -self.pull_dist
+        dy = 0.0
         try:
             self.fa.stop_skill()
         except Exception:
@@ -474,19 +483,15 @@ class PairedEvaluator:
         current_pose = self.fa.get_pose()
         target_pose = copy.deepcopy(current_pose)
         target_pose.translation = current_pose.translation + np.array([dx, dy, self.pull_z_bias])
-        mode_str = (f"impedance k={self.pull_stiffness} N/m"
-                    if self.pull_stiffness is not None else "position control")
-        print(f"  [pull] {self.pull_dist*100:.1f} cm at {angle_deg:.0f}° "
-              f"(dx={dx*100:.1f} cm, dy={dy*100:.1f} cm) [{mode_str}] ...")
+        kx = float(self.pull_stiffness)
+        ky = float(self.pull_lateral_stiffness)
+        kz = float(self.pull_z_stiffness)
+        print(f"  [pull] {self.pull_dist*100:.1f} cm toward robot base "
+              f"[kx={kx:.0f} / ky={ky:.0f} / kz={kz:.0f} N/m] ...")
         try:
-            if self.pull_stiffness is not None:
-                k = float(self.pull_stiffness)
-                kz = float(self.pull_z_stiffness) if self.pull_z_stiffness is not None else k
-                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False,
-                                  buffer_time=0.2, use_impedance=True,
-                                  cartesian_impedances=[k, k, kz, 10.0, 10.0, 10.0])
-            else:
-                self.fa.goto_pose(target_pose, duration=3.0, dynamic=False, buffer_time=0.2)
+            self.fa.goto_pose(target_pose, duration=5.0, dynamic=False,
+                              buffer_time=0.2, use_impedance=True,
+                              cartesian_impedances=[kx, ky, kz, 10.0, 10.0, 10.0])
         except Exception as e:
             print(f"  [pull] WARNING: move failed: {e}")
 
@@ -727,20 +732,29 @@ class PairedEvaluator:
             self._stop_live_control()
 
         # Pull test (only if --pull-dist was set)
-        pull_angle_used = None
+        ratchet_info = None
         if self.pull_dist is not None and not self.dry_run and self.fa is not None:
-            if self.pull_angle is not None:
-                pull_angle_used = self.pull_angle
-            else:
-                while True:
-                    try:
-                        raw = input(f"  Pull angle for {model_label} "
-                                    f"(degrees, X=0 Y=90): ").strip()
-                        pull_angle_used = float(raw)
-                        break
-                    except ValueError:
-                        print("  Enter a number.")
-            self._execute_pull(pull_angle_used)
+            self._execute_pull()
+            # Ratchet reading — operator enters tooth count, script computes displacement + force
+            print("  Ratchet teeth (0–11, 0=no movement, Enter=skip): ", end="", flush=True)
+            try:
+                raw = input().strip()
+                if raw.isdigit():
+                    teeth = int(raw)
+                    if 0 <= teeth <= 11:
+                        disp_mm   = round(teeth * 9.3, 1)
+                        disp_in   = disp_mm / 25.4
+                        force_lbf = round(2 * (0.59 + 0.8 * disp_in), 3)
+                        force_N   = round(force_lbf * 4.44822, 2)
+                        ratchet_info = {
+                            "teeth":           teeth,
+                            "displacement_mm": disp_mm,
+                            "force_lbf":       force_lbf,
+                            "force_N":         force_N,
+                        }
+                        print(f"    → {disp_mm:.1f} mm  |  F ≈ {force_lbf:.2f} lbf ({force_N:.1f} N)")
+            except (EOFError, ValueError):
+                pass
 
         # Collect rating
         print(f"  Rate this trial:   g = good   b = bad   s = skip")
@@ -759,11 +773,12 @@ class PairedEvaluator:
         cv2.destroyAllWindows()
         symbol = "✓" if rating == "good" else ("✗" if rating == "bad" else "–")
         print(f"  {symbol} {model_label}: {rating.upper()}")
-        return rating, aborted, pull_angle_used
+        return rating, aborted, ratchet_info
 
     # ── Pair loop ────────────────────────────────────────────────────────────
 
-    def run_pair(self, pair_idx, order, batch_idx=0, batch_pair_idx=0, batch_n_pairs=1):
+    def run_pair(self, pair_idx, order, batch_idx=0, batch_pair_idx=0, batch_n_pairs=1,
+                 orientation_deg=None):
         """Run one full pair (fresh PC captured BEFORE EACH trial). Returns pair dict.
 
         `pair_idx` is the GLOBAL session pair counter (used for strict model
@@ -778,11 +793,12 @@ class PairedEvaluator:
         the hold as close to its trial-1 location as possible, then re-scan.
         Per-PC centroids are logged in the JSON so drift can be audited.
         """
+        orient_str = f"{orientation_deg}°" if orientation_deg is not None else "not recorded"
         print(f"\n{'='*62}")
         print(f"  SESSION PAIR {pair_idx+1}   |   "
               f"BATCH {batch_idx+1}, pair {batch_pair_idx+1}/{batch_n_pairs}")
         print(f"  Hold : {HOLD_NAMES.get(self.hold_id,'?')} (id={self.hold_id})   "
-              f"Grasp : {self.grasp_type}")
+              f"Grasp : {self.grasp_type}   Orientation : {orient_str}")
         print(f"  Order: {order[0]}  →  {order[1]}")
         print(f"{'='*62}")
 
@@ -830,13 +846,14 @@ class PairedEvaluator:
             overlay_tag = (f"B{batch_idx+1} "
                            f"pair {batch_pair_idx+1}/{batch_n_pairs} "
                            f"[{self.grasp_type}]")
-            rating, trial_aborted, pull_angle_used = self._run_single_trial(
+            rating, trial_aborted, ratchet_info = self._run_single_trial(
                 policy, norm, cfg, gt_id, scene_pc, model_label, pair_idx,
                 overlay_tag=overlay_tag)
 
             ratings[model_label] = rating
-            if pull_angle_used is not None:
-                pc_stats[model_label]["pull_angle_deg"] = pull_angle_used
+            pc_stats[model_label]["pull_angle_deg"] = 180.0
+            if ratchet_info is not None:
+                pc_stats[model_label]["ratchet"] = ratchet_info
             aborted = aborted or trial_aborted
             if trial_aborted:
                 break
@@ -854,24 +871,29 @@ class PairedEvaluator:
             print(f"    PC centroid drift between trials: {drift_m*1000:.1f} mm")
 
         result = {
-            "pair":           pair_idx,
-            "batch":          batch_idx,
-            "batch_pair":     batch_pair_idx,
-            "hold_id":        self.hold_id,
-            "hold_name":      HOLD_NAMES.get(self.hold_id, "unknown"),
-            "grasp_type":     self.grasp_type,
-            "grasp_type_id":  self.grasp_type_id,
-            "order":          order,
-            "with_rating":    ratings.get(MODEL_WITH, "skip"),
-            "no_rating":      ratings.get(MODEL_NO,   "skip"),
-            "pc_stats":       pc_stats,
-            "aborted":        aborted,
-            "timestamp":      datetime.now().isoformat(),
+            "pair":            pair_idx,
+            "batch":           batch_idx,
+            "batch_pair":      batch_pair_idx,
+            "hold_id":         self.hold_id,
+            "hold_name":       HOLD_NAMES.get(self.hold_id, "unknown"),
+            "grasp_type":      self.grasp_type,
+            "grasp_type_id":   self.grasp_type_id,
+            "orientation_deg": orientation_deg,
+            "order":           order,
+            "with_rating":     ratings.get(MODEL_WITH, "skip"),
+            "no_rating":       ratings.get(MODEL_NO,   "skip"),
+            "pc_stats":        pc_stats,
+            "aborted":         aborted,
+            "timestamp":       datetime.now().isoformat(),
         }
         if self.pull_dist is not None:
-            result["pull_dist_m"] = self.pull_dist
-        if self.pull_stiffness is not None:
-            result["pull_stiffness_Nm"] = self.pull_stiffness
+            result["pull_dist_m"]    = self.pull_dist
+            result["pull_angle_deg"] = 180.0
+            result["pull_stiffness"] = {
+                "kx": self.pull_stiffness,
+                "ky": self.pull_lateral_stiffness,
+                "kz": self.pull_z_stiffness,
+            }
         return result
 
     # ── Batch / session orchestration ────────────────────────────────────────
@@ -887,7 +909,8 @@ class PairedEvaluator:
             return [self._first_model, other]
         return [other, self._first_model]
 
-    def _get_or_create_batch_config(self, grasp_type, hold_id, n_pairs, batch_idx):
+    def _get_or_create_batch_config(self, grasp_type, hold_id, n_pairs, batch_idx,
+                                    orientation_deg=None):
         """Return the batch config dict for this batch_idx, creating it if needed.
 
         If the batch was previously started (resume), reuse the existing entry
@@ -901,30 +924,38 @@ class PairedEvaluator:
             "hold_id":         hold_id,
             "hold_name":       HOLD_NAMES.get(hold_id, "unknown"),
             "n_pairs":         n_pairs,
+            "orientation_deg": orientation_deg,
             "completed_pairs": 0,
         }
         self._batch_configs.append(bc)
         return bc
 
-    def run_batch(self, grasp_type, hold_id, n_pairs, batch_idx):
-        """Run (n_pairs - already_completed) pairs with fixed (grasp_type, hold_id).
-        Propagates QuitRequested if the user types 'q' at a prompt."""
+    def run_batch(self, grasp_type, hold_id, n_pairs, batch_idx,
+                  orientation_deg=None):
+        """Run (n_pairs - already_completed) pairs with fixed (grasp_type, hold_id,
+        orientation_deg). Propagates QuitRequested if the user types 'q' at a prompt."""
         self._set_batch(grasp_type, hold_id)
-        bc = self._get_or_create_batch_config(grasp_type, hold_id, n_pairs, batch_idx)
+        bc = self._get_or_create_batch_config(grasp_type, hold_id, n_pairs,
+                                               batch_idx, orientation_deg)
         start_bpi = bc.get("completed_pairs", 0)
+        # Use saved orientation if resuming and none was passed
+        if orientation_deg is None:
+            orientation_deg = bc.get("orientation_deg")
 
         if start_bpi >= n_pairs:
-            print(f"\n  Batch {batch_idx+1} ({grasp_type}) already complete "
+            print(f"\n  Batch {batch_idx+1} ({grasp_type} @ "
+                  f"{orientation_deg}°) already complete "
                   f"({start_bpi}/{n_pairs}) — skipping.")
             return
 
+        orient_str = f"{orientation_deg}°" if orientation_deg is not None else "orientation not set"
         print(f"\n{'#'*62}")
         print(f"  BATCH {batch_idx+1} — grasp={grasp_type}, "
               f"hold={HOLD_NAMES.get(hold_id,'?')} (id={hold_id}), "
-              f"{n_pairs} pairs" +
+              f"orientation={orient_str}, {n_pairs} pairs" +
               (f"  [RESUMING from pair {start_bpi+1}]" if start_bpi > 0 else ""))
         print(f"{'#'*62}")
-        print(f"  Place the {grasp_type.upper()} hold on the workspace.")
+        print(f"  Set the {grasp_type.upper()} hold to {orient_str} on the testbed.")
         self._wait_or_quit("  Press Enter when the hold is in position ...")
 
         for bpi in range(start_bpi, n_pairs):
@@ -932,7 +963,8 @@ class PairedEvaluator:
             result = self.run_pair(self._global_pair_idx, order,
                                    batch_idx=batch_idx,
                                    batch_pair_idx=bpi,
-                                   batch_n_pairs=n_pairs)
+                                   batch_n_pairs=n_pairs,
+                                   orientation_deg=orientation_deg)
             self._all_pairs.append(result)
             self._global_pair_idx += 1
             bc["completed_pairs"] = bpi + 1
@@ -949,23 +981,25 @@ class PairedEvaluator:
                 print(f"\n{'─'*62}")
                 print(f"  Batch {batch_idx+1} — pair {bpi+1}/{n_pairs} complete "
                       f"({len(self._all_pairs)} pairs total this session).")
-                print(f"  REPOSITION the {grasp_type} hold "
-                      f"(keep the same physical hold on the workspace).")
+                print(f"  REPOSITION the {grasp_type} hold to {orient_str} "
+                      f"(same orientation, fresh position).")
                 self._wait_or_quit("  Press Enter when ready for the next pair ...")
 
-        print(f"\n  ✓ Batch {batch_idx+1} ({grasp_type}) complete: "
+        print(f"\n  ✓ Batch {batch_idx+1} ({grasp_type} @ {orient_str}) complete: "
               f"{n_pairs}/{n_pairs} pairs recorded.")
 
     def run_multi_batch(self, batches):
-        """batches: list of (grasp_type, hold_id, n_pairs) tuples.
+        """batches: list of (grasp_type, hold_id, n_pairs[, orientation_deg]) tuples.
 
         Preserves an existing mode if one was already set (e.g. 'single' or a
         resumed session). Otherwise defaults to 'scripted'."""
         if not self._mode:
             self._mode = "scripted"
         self._planned_batches = list(batches)
-        for i, (gt, hid, n) in enumerate(batches):
-            self.run_batch(gt, hid, n, batch_idx=i)
+        for i, spec in enumerate(batches):
+            gt, hid, n = spec[0], spec[1], spec[2]
+            orientation_deg = spec[3] if len(spec) > 3 else None
+            self.run_batch(gt, hid, n, batch_idx=i, orientation_deg=orientation_deg)
         self._save_and_analyze()
 
     def run_interactive(self):
@@ -987,11 +1021,15 @@ class PairedEvaluator:
             hid = self._prompt_hold_id(default_for_grasp=gt)
             if hid is None:
                 raise QuitRequested()
-            n = self._prompt_int("How many pairs in this batch?", default=5, min_val=1)
+            orientation_deg = self._prompt_orientation()
+            if orientation_deg is None:
+                raise QuitRequested()
+            n = self._prompt_int("How many pairs in this batch?", default=4, min_val=1)
             if n is None:
                 raise QuitRequested()
 
-            self.run_batch(gt, hid, n, batch_idx=batch_idx)
+            self.run_batch(gt, hid, n, batch_idx=batch_idx,
+                           orientation_deg=orientation_deg)
             batch_idx += 1
 
             cont = self._prompt_yes_no(
@@ -1002,6 +1040,32 @@ class PairedEvaluator:
         self._save_and_analyze()
 
     # ── Interactive prompts ──────────────────────────────────────────────────
+
+    STANDARD_ORIENTATIONS = [-45.0, -22.5, 0.0, 22.5, 45.0]
+
+    def _prompt_orientation(self, default=None):
+        """Prompt operator for hold orientation on the testbed (degrees).
+        Standard values: -45, -22.5, 0, 22.5, 45 relative to pull axis."""
+        opts = ", ".join(str(int(v) if v == int(v) else v)
+                         for v in self.STANDARD_ORIENTATIONS)
+        suffix = f" (default {default})" if default is not None else ""
+        print(f"  Hold orientation on testbed [{opts}]{suffix}: ", end="", flush=True)
+        while True:
+            try:
+                raw = input().strip()
+            except (EOFError, KeyboardInterrupt):
+                return None
+            if raw in ("q", "quit", "exit"):
+                return None
+            if raw == "" and default is not None:
+                return float(default)
+            try:
+                val = float(raw)
+                if val not in self.STANDARD_ORIENTATIONS:
+                    print(f"  Note: {val}° is not a standard orientation {self.STANDARD_ORIENTATIONS}.")
+                return val
+            except ValueError:
+                print(f"  Enter a number (e.g. -45, -22.5, 0, 22.5, 45): ", end="", flush=True)
 
     def _prompt_grasp_type(self):
         names = list(GRASP_TYPE_IDS.keys())
@@ -1204,9 +1268,11 @@ class PairedEvaluator:
 # ── Entry point ───────────────────────────────────────────────────────────
 
 def _parse_batches(spec):
-    """Parse a batches spec like 'crimp:1:5,jug:0:5,sloper:2:5,pinch:3:5'.
+    """Parse a batches spec like 'jug:0:4:-45,jug:0:4:0,crimp:1:4:22.5'.
 
-    Returns list of (grasp_type, hold_id, n_pairs) tuples.
+    Format: grasp:hold:pairs[:orientation_deg]
+    orientation_deg is optional (e.g. -45, -22.5, 0, 22.5, 45).
+    Returns list of (grasp_type, hold_id, n_pairs, orientation_deg) tuples.
     """
     batches = []
     for chunk in spec.split(","):
@@ -1214,22 +1280,23 @@ def _parse_batches(spec):
         if not chunk:
             continue
         parts = chunk.split(":")
-        if len(parts) != 3:
+        if len(parts) not in (3, 4):
             raise ValueError(
-                f"Bad batch spec '{chunk}' — expected grasp:hold:pairs")
-        gt, hid, n = parts
-        gt = gt.strip().lower()
+                f"Bad batch spec '{chunk}' — expected grasp:hold:pairs or "
+                f"grasp:hold:pairs:orientation_deg  (e.g. jug:0:4:-45)")
+        gt  = parts[0].strip().lower()
+        hid = int(parts[1])
+        n   = int(parts[2])
+        orientation_deg = float(parts[3]) if len(parts) == 4 else None
         if gt not in GRASP_TYPE_IDS:
             raise ValueError(f"Unknown grasp type '{gt}' in '{chunk}'. "
                              f"Valid: {list(GRASP_TYPE_IDS.keys())}")
-        hid = int(hid)
         if hid not in HOLD_NAMES:
             raise ValueError(f"Unknown hold id {hid} in '{chunk}'. "
                              f"Valid: {list(HOLD_NAMES.keys())}")
-        n = int(n)
         if n < 1:
             raise ValueError(f"Pair count must be >=1, got {n} in '{chunk}'")
-        batches.append((gt, hid, n))
+        batches.append((gt, hid, n, orientation_deg))
     if not batches:
         raise ValueError("Empty --batches spec")
     return batches
@@ -1248,6 +1315,10 @@ def main():
                         help="Grasp type for single-batch mode")
     parser.add_argument("--pairs", type=int, default=None,
                         help="Number of pairs for single-batch mode")
+    parser.add_argument("--orientation", type=float, default=None,
+                        help="Hold orientation in degrees for single-batch mode "
+                             "(-45, -22.5, 0, 22.5, 45). Logged per pair. "
+                             "If omitted, you will be prompted interactively.")
     # Scripted multi-batch
     parser.add_argument("--batches", type=str, default=None,
                         help="Scripted multi-batch spec. Format: "
@@ -1271,27 +1342,25 @@ def main():
     parser.add_argument("--dry-run", action="store_true",
                         help="No robot — cameras only, for testing the script flow")
     parser.add_argument("--pull-dist", type=float, default=None,
-                        help="If set, execute a pull test after each rollout: move the arm "
-                             "this many meters in the X,Y plane and rate whether the hold "
-                             "moved with it. E.g. --pull-dist 0.05 for a 5 cm pull.")
-    parser.add_argument("--pull-angle", type=float, default=None,
-                        help="Direction of the pull in degrees (0=+X, 90=+Y). "
-                             "If omitted, you will be prompted to enter it before each pull.")
-    parser.add_argument("--pull-stiffness", type=float, default=None,
-                        help="If set, use Cartesian impedance control during the pull with "
-                             "this translational stiffness in N/m (e.g. 50). The arm will "
-                             "only exert a bounded force, so a bad grasp won't be dragged. "
-                             "If omitted, position control is used (arm exerts unlimited force).")
-    parser.add_argument("--pull-z-stiffness", type=float, default=None,
-                        help="Z-axis (height) stiffness in N/m during impedance pull. "
-                             "If omitted, uses --pull-stiffness for all axes. "
-                             "Set lower than --pull-stiffness to allow vertical compliance "
-                             "while keeping X/Y stiff (e.g. --pull-stiffness 200 --pull-z-stiffness 20).")
+                        help="If set, execute a spring-testbed pull test after each rollout: "
+                             "arm moves this many meters toward robot base (180°, -X, hardcoded). "
+                             "Standard value: 0.105 (10.5 cm, 11 ratchet teeth). "
+                             "After each pull, enter the ratchet tooth count (0–11); "
+                             "the script computes and logs displacement + slip force.")
+    parser.add_argument("--pull-stiffness", type=float, default=4000.0,
+                        help="X-axis (pull direction) Cartesian impedance stiffness in N/m. "
+                             "Default 4000. At 4000 vs spring k≈280 N/m, arm equilibrates "
+                             "at ~97 mm for a perfect grip (≈10 ratchet teeth).")
+    parser.add_argument("--pull-lateral-stiffness", type=float, default=100.0,
+                        help="Y-axis (lateral) Cartesian impedance stiffness in N/m. "
+                             "Default 100 — compliant, allows natural side-to-side hand flex.")
+    parser.add_argument("--pull-z-stiffness", type=float, default=100.0,
+                        help="Z-axis (vertical) Cartesian impedance stiffness in N/m. "
+                             "Default 100 — compliant, allows natural up/down hand flex.")
     parser.add_argument("--pull-z-bias", type=float, default=0.0,
-                        help="Upward Z offset (meters) added to the target pose during impedance pull. "
-                             "Compensates for LEAP hand weight not in Franka gravity model — "
-                             "prevents arm from sagging into hold. Tune empirically: start at 0.02 "
-                             "and increase until arm neither droops nor presses down. (default: 0.0)")
+                        help="Upward Z offset (meters) added to pull target pose. "
+                             "Compensates for LEAP hand weight not in Franka gravity model. "
+                             "Tune empirically: start at 0.02. (default: 0.0)")
     args = parser.parse_args()
 
     # Decide run mode from CLI args (may be overridden by --resume below)
@@ -1308,7 +1377,8 @@ def main():
             parser.error(str(e))
         run_mode = "scripted"
     elif all(single_batch_args):
-        scripted_batches = [(args.grasp_type, args.hold, args.pairs)]
+        scripted_batches = [(args.grasp_type, args.hold, args.pairs,
+                             getattr(args, "orientation", None))]
         run_mode = "single"
     elif not any(single_batch_args):
         scripted_batches = None
@@ -1326,8 +1396,8 @@ def main():
         results_dir=args.results_dir,
         num_inference_steps=args.inference_steps,
         pull_dist=args.pull_dist,
-        pull_angle=args.pull_angle,
         pull_stiffness=args.pull_stiffness,
+        pull_lateral_stiffness=args.pull_lateral_stiffness,
         pull_z_stiffness=args.pull_z_stiffness,
         pull_z_bias=args.pull_z_bias,
     )

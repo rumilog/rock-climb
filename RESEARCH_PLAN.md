@@ -262,13 +262,17 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 1. **Grasp success rate** — binary: did the hand achieve stable contact?
 2. **Grasp type accuracy** — did the robot use the correct grasp strategy?
 3. **Hold stability (spring displacement test)** — after policy convergence, the arm
-   pulls the hold along the spring testbed's fixed linear axis (always 180°, toward
-   the robot base). Five hold orientations are tested per grasp type: 0°, ±22.5°,
-   ±45° relative to the pull axis. The **linear ratchet** captures the hold's peak
-   displacement even when it slips mid-trial, yielding a continuous displacement
-   metric (mm) rather than a binary outcome. Binary success (co-displacement ≥
-   threshold) is derived from this reading. This is the primary success criterion —
-   adapted from the standard lift test for holds that cannot be picked up.
+   pulls the hold 10.5 cm along the testbed's fixed linear axis (hardcoded 180°,
+   toward the robot base, -X direction) using impedance control (kx=4000 N/m pull
+   axis, ky=kz=100 N/m lateral/vertical compliance). Five hold orientations are
+   tested per grasp type: 0°, ±22.5°, ±45°. The **linear ratchet** (9.3 mm/tooth,
+   11 teeth) captures peak hold displacement; the operator enters the tooth count
+   into the script after each pull. Slip force is computed from two springs in
+   parallel: `F = (1.18 + 1.6 × x_in) × 4.448 N` where x_in = displacement/25.4.
+   Range: 5.2 N (0 teeth, preload) to 33.9 N (11 teeth). The per-trial `ratchet`
+   dict is logged in the eval JSON; binary success threshold can be set post-hoc.
+   This is the primary success criterion — adapted from the standard lift test for
+   holds that cannot be picked up.
 4. **Cross-category generalization** — success on held-out test_edge
 5. **Ablations**:
    - With vs without grasp type conditioning ← **LOAD-BEARING** — preliminary results confirm conditioning wins. `--no-grasp-conditioning` flag implemented 2026-04-14.
@@ -288,13 +292,14 @@ Conditioning + Diffusion timestep → 1D Temporal U-Net → Action chunk (16 ste
 3. Contact time (seconds from start to first contact)
 
 **Spring displacement test protocol:** The spring testbed constrains hold motion to
-a single axis (180°, toward the robot base), so `--pull-angle 180` is fixed for
-all trials. The varying dimension is the **hold orientation** on the testbed:
-0°, ±22.5°, ±45° relative to the pull axis. For each grasp type, run at least
-4 trials per orientation (20 pairs total across the 5 orientations). Human
-visually confirms whether the hold co-displaced with the arm (binary). See
-CLAUDE.md "Pull test angle convention" for the coordinate diagram; the arm always
-moves at 180° (toward robot base) in that diagram.
+a single axis (180°, toward the robot base, -X direction). Pull angle is hardcoded
+in both eval scripts — no `--pull-angle` flag needed. Max pull distance is 10.5 cm
+(`--pull-dist 0.105`). After each trial the operator enters the ratchet tooth count
+(0–11); the script logs displacement and slip force automatically.
+The varying dimension is the **hold orientation**: 0°, ±22.5°, ±45° relative to
+the pull axis. For each grasp type, run at least 4 trials per orientation (20 pairs
+total across the 5 orientations). Log orientation per trial in the lab notebook;
+it is not stored in the zarr.
 
 **Statistical tests:** Fisher's exact test for pairwise success rate comparisons.
 Report 95% Wilson confidence intervals on all success rates.

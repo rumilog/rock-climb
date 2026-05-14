@@ -243,7 +243,7 @@ DDPM 1D U-Net → action chunk (16 × 23-dim)
 - PC trial flow: arm out → SPACE → capture PC → arm back → SPACE → start policy
 - `--grasp-type` arg required for PC checkpoints (or interactive prompt)
 - **Inference speed:** default `--inference-steps 100` (full DDPM). For PC mode use `--inference-steps 10` (DDIM, per RESEARCH_PLAN recommendation) for faster 10 Hz execution
-- **Pull test** (`--pull-dist`, `--pull-angle`): after the rollout ends, arm executes a Cartesian displacement of `pull_dist` meters in the X,Y plane at `pull_angle` degrees. You then visually confirm whether the hold moved with the arm (`g`/`b`). If `--pull-angle` is not set, you are prompted for the angle before each pull. See CLAUDE.md "Pull test angle convention" for the coordinate diagram. Pull angle and distance are logged per trial in the result JSON.
+- **Pull test** (`--pull-dist`): after the rollout ends, arm pulls 10.5 cm toward the robot base (180° = −X, hardcoded). Uses impedance control with differential stiffness: kx=4000 N/m (pull axis), ky=100 N/m (lateral), kz=100 N/m (vertical). After the pull, the operator enters the ratchet tooth count (0–11); the script computes displacement (teeth × 9.3 mm) and slip force from the two-spring formula `F = (1.18 + 1.6 × x_in) × 4.448 N`, then logs `ratchet.{teeth, displacement_mm, force_lbf, force_N}` to the result JSON. `--pull-angle` accepts a custom angle for non-testbed use (defaults to 180°). Stiffness overrideable via `--pull-stiffness` (kx), `--pull-lateral-stiffness` (ky), `--pull-z-stiffness` (kz), `--pull-z-bias`.
 
 ### `paired_eval.py` (canonical tool for WITH-vs-WITHOUT-taxonomy comparison)
 
@@ -262,7 +262,7 @@ Key design choices:
 
 Saved JSON fields: `session_id`, `mode`, `first_model`, `planned_batches`, `batches` (each with `completed_pairs`), `pairs` (each with `grasp_type`, `hold_id`, `order`, `with_rating`, `no_rating`, `pc_stats` (including `pull_angle_deg` per trial if pull test was used), `pull_dist_m`, `timestamp`), `last_saved`.
 
-**Pull test** (`--pull-dist`, `--pull-angle`): same as evaluate.py. After each rollout the arm executes a Cartesian displacement; you visually confirm whether the hold moved (`g`/`b`). Prompted per trial if `--pull-angle` is omitted (recommended — holds rotate between trials). See CLAUDE.md "Pull test angle convention" for the coordinate diagram.
+**Pull test** (`--pull-dist`): same mechanics as evaluate.py — 10.5 cm pull at 180° (hardcoded, no `--pull-angle` flag in paired_eval), impedance kx=4000/ky=100/kz=100 N/m, ratchet prompt after each trial, per-trial `ratchet` dict logged in `pc_stats[model_label]`.
 
 Default checkpoints: `checkpoints/pc_with_taxonomy/best.pt` and `checkpoints/pc_no_taxonomy/best.pt`. Override with `--with-ckpt` / `--no-ckpt`.
 
@@ -309,9 +309,9 @@ python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
     --hold 0 --grasp-type crimp
 # --inference-steps defaults to 10 DDIM (correct for 10 Hz); use 100 only for offline comparison
 
-# With disturbance rejection pull test (5 cm pull, angle prompted each trial):
+# With spring testbed pull test (10.5 cm pull, 180° hardcoded, ratchet prompt after each trial):
 python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
-    --hold 0 --grasp-type crimp --pull-dist 0.05
+    --hold 0 --grasp-type crimp --pull-dist 0.105
 ```
 
 ### Paired Evaluation (WITH vs WITHOUT taxonomy — the main comparison experiment)
@@ -324,8 +324,12 @@ python3 paired_eval.py
 # Or scripted, for a planned full session (20 pairs per hold = 80 total pairs, ~160 rollouts):
 python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
 
-# With disturbance rejection pull test (angle prompted per trial):
-python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20 --pull-dist 0.05
+# Full session — 4 pairs × 5 orientations per hold, batches include orientation_deg:
+python3 paired_eval.py --pull-dist 0.105 --batches \
+  jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
+  crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
+  sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
+  pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
 ```
 
 During the run, type `q` + Enter at any "Press Enter ..." prompt to save and

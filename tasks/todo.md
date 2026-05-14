@@ -66,8 +66,12 @@ each pair — not by storing it in the training zarr.
    the ratchet displacement (mm) by eye and log it alongside the binary success
    rating; compute slip force offline via `F = k · x`.
    ```bash
-   python3 paired_eval.py --pull-dist 0.05 --pull-angle 180 \
-       --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
+   # Full session (4 pairs × 5 orientations per hold, 80 pairs total):
+   python3 paired_eval.py --pull-dist 0.105 --batches \
+     jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
+     crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
+     sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
+     pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
    ```
 
 5. **Wrong-label ablation** — after main eval is done
@@ -201,9 +205,9 @@ For EVERY evaluation trial, record:
 
 **How to run with pull test:**
 ```bash
-python3 paired_eval.py --pull-dist 0.05   # angle prompted each trial
+python3 paired_eval.py --pull-dist 0.105
 ```
-Enter the pull angle when prompted (see CLAUDE.md "Pull test angle convention" for the diagram). Use the direction perpendicular to the hold's main axis.
+Pull angle is hardcoded at 180° (toward robot base, -X). After each pull, enter the ratchet tooth count (0–11) when prompted; the script computes and logs displacement + force. See CLAUDE.md "Spring testbed protocol" for the force table.
 
 ### Trial counts
 - Per model × per grasp type: **minimum 20 trials** (ideally 30)
