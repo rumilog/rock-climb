@@ -13,7 +13,9 @@
 #
 #   2. Download the dataset:
 #        huggingface-cli download rlogh/climbing-holds-rig \
-#            --repo-type dataset --local-dir ./datasets/climbing_holds_rig.zarr
+#            --repo-type dataset --local-dir /tmp/rig_download
+#        # The zarr lands at: /tmp/rig_download/climbing_holds_rig.zarr
+#        # Then set: export ZARR_PATH=/tmp/rig_download/climbing_holds_rig.zarr
 #
 #   3. Run:
 #        bash data_collection/run_training.sh
