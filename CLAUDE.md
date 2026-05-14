@@ -357,3 +357,4 @@ after 10 reps.
 3 bad for the jug,
 0 bad for the crimp
 2 bad sloper
+2 bad pinch
