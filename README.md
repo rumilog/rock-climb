@@ -42,15 +42,17 @@ pip install -r requirements.txt
 
 ```bash
 mkdir -p datasets
-huggingface-cli download rlogh/climbing-holds-pointcloud --repo-type dataset --local-dir ./datasets/climbing_holds.zarr
+hf download rlogh/climbing-holds-pointcloud --repo-type dataset --local-dir ./datasets/climbing_holds_rig.zarr
 ```
+
+(Note: older HuggingFace CLI was `huggingface-cli`; current is `hf`. Both still work.)
 
 Verify the download:
 
 ```bash
 python3 -c "
 import zarr
-z = zarr.open('datasets/climbing_holds.zarr', 'r')
+z = zarr.open('datasets/climbing_holds_rig.zarr', 'r')
 print('Episodes:', z['meta/episode_ends'].shape[0])
 print('Timesteps:', z['data/state'].shape[0])
 print('Point cloud shape:', z['data/point_cloud'].shape)
@@ -61,12 +63,14 @@ print('Grasp type IDs:', z['meta/grasp_type_id'][:5], '...')
 Expected output:
 ```
 Episodes: 200
-Timesteps: 29647
-Point cloud shape: (29647, 1024, 3)
+Timesteps: 27821
+Point cloud shape: (27821, 1024, 3)
 Grasp type IDs: [0 0 0 0 0] ...
 ```
 
-(200 episodes: 50 crimp + 50 sloper + 50 pinch + 50 jug, clean PC with z_min=0.006)
+The rig-era dataset: 200 episodes (50 per grasp type, 10 episodes per orientation × 5 orientations).
+Workspace bounds: `z_min=0.027, z_max=0.40` (clipping the spring testbed rig deck while
+preserving full hold geometry).
 
 ### 4. Run training
 
@@ -76,8 +80,8 @@ cd data_collection
 
 python3 train.py \
     --point-cloud \
-    --zarr ../datasets/climbing_holds.zarr \
-    --ckpt-dir ../checkpoints/pc_with_taxonomy \
+    --zarr ../datasets/climbing_holds_rig.zarr \
+    --ckpt-dir ../checkpoints/pc_with_taxonomy_rig \
     --epochs 3000 \
     --batch 128 \
     --augment \
@@ -90,13 +94,19 @@ python3 train.py \
 python3 train.py \
     --point-cloud \
     --no-grasp-conditioning \
-    --zarr ../datasets/climbing_holds.zarr \
-    --ckpt-dir ../checkpoints/pc_no_taxonomy \
+    --zarr ../datasets/climbing_holds_rig.zarr \
+    --ckpt-dir ../checkpoints/pc_no_taxonomy_rig \
     --epochs 3000 \
     --batch 128 \
     --augment \
     --good-only \
     --save-every 100
+```
+
+Pre-trained checkpoints are also available on HuggingFace if you want to skip training:
+```bash
+hf download rlogh/climbing-holds-rig-with-taxonomy --local-dir checkpoints/pc_with_taxonomy_rig
+hf download rlogh/climbing-holds-rig-no-taxonomy   --local-dir checkpoints/pc_no_taxonomy_rig
 ```
 
 Training writes to the checkpoint directory:
@@ -132,7 +142,7 @@ cat ../checkpoints/pc_with_taxonomy/training_status.md
 | Action horizon | 8 timesteps |
 | Action dim | 23 (7 arm joints + 16 hand joints) |
 | Point cloud | 1024 pts, XYZ only, world frame, FPS downsampled |
-| Dataset | 200 episodes (50 per grasp type), 29647 timesteps, 4 holds — clean PC (z_min=0.006) |
+| Dataset | 200 episodes (50 per grasp type × 5 orientations × 10 reps), 27,821 timesteps, 4 holds — spring-testbed rig (z_min=0.027) |
 
 ---
 
@@ -162,17 +172,32 @@ source ~/franka/bin/activate
 source ~/frankapy/catkin_ws/devel/setup.bash
 cd ~/Desktop/tele/data_collection
 
-# With taxonomy
-python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy/best.pt \
+# Single model (no pull test)
+python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy_rig/best.pt \
     --hold 0 --grasp-type jug
 
-# Without taxonomy (ablation)
-python3 evaluate.py --checkpoint ../checkpoints/pc_no_taxonomy/best.pt \
-    --hold 0 --grasp-type jug
+# Spring testbed pull test (13 cm pull at 180°, ratchet readout per trial)
+python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy_rig/best.pt \
+    --hold 0 --grasp-type jug --pull-dist 0.130
 ```
 
-Run **20+ trials per grasp type per model** (160+ total). Record grasp success,
-type correctness, and hold stability per trial for statistical analysis.
+For the paired with-vs-without comparison (recommended), use `paired_eval.py`:
+```bash
+# Full session: 4 pairs × 5 orientations × 4 hold types = 80 paired trials
+python3 paired_eval.py --pull-dist 0.130 \
+    --batches jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
+```
+
+After collection, analyse and display:
+```bash
+python3 eval_results/display_results.py          # terminal table + figure
+python3 eval_results/generate_ratchet_figures.py # 8 force-based figures
+python3 eval_results/analyze_observations.py     # failure-mode breakdown + order-effect check
+python3 eval_results/generate_training_curves.py # loss-vs-epoch for both models
+```
+
+See `HANDOFF.md` §11 for full analysis-reproduction instructions and `OBSERVATIONS.md`
+for pre-written paragraphs with all numbers.
 
 ---
 
@@ -195,9 +220,23 @@ climbing_holds.zarr/
 
 Note: images are NOT included in this dataset — the policy uses point clouds only.
 
+---
 
-cameras 2 and 3, 5 and 4: 24.5 inches apart
-cameras 4 and 3, 5 and 2: 35.75 inch
-had to redo 5 times due to random errors popping up in code
-7 inches from front/top of holder (+x)
-31 cm from wall for side of arm
+## Documentation
+
+| File | Purpose |
+|------|---------|
+| `PAPER_METHODOLOGY.md` | Paper-ready methodology reference (compute, hardware, dataset, training, statistics, reproducibility, limitations) |
+| `OBSERVATIONS.md` | Pre-written paper paragraphs with all results numbers |
+| `HANDOFF.md` | Technical reference (hardware, file layout, known quirks, analysis reproduction) |
+| `RESEARCH_PLAN.md` | Full research design with related work citations |
+| `PROGRESS_UPDATE.md` | Slide-ready summary with results table |
+| `IMPLEMENTATION_LOG.md` | Chronological code-change log |
+| `tasks/todo.md` / `tasks/lessons.md` | Current next steps + lessons learned |
+
+---
+
+## Hardware notes (Franka workstation)
+
+- Cameras 2/3 and 5/4 are 24.5 in apart; cameras 4/3 and 5/2 are 35.75 in apart
+- Hold mount sits 7 in from the front of the holder (+X) and 31 cm from the wall on the arm side

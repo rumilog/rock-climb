@@ -114,18 +114,21 @@ Climbing holds are uniquely suited as a dexterous manipulation benchmark because
 - **Point cloud generation**: depth → XYZ via intrinsics, fused across 4 cameras
   into world frame using the extrinsics, then cropped to a calibrated workspace
   bounding box and downsampled with FPS
-- **Spring displacement testbed** (under construction, 2026-04-27): a linearly
-  constrained spring platform that seats each climbing hold and restricts
-  displacement to a single axis — 180° (toward the robot base). The testbed
-  enables repeatable disturbance testing with a consistent pull direction. Holds
-  are placed at 5 discrete orientations relative to the pull axis: 0°, ±22.5°,
-  ±45°. Orientations beyond ±45° are not tested because frictional slip is
-  certain at those angles regardless of grasp quality.
+- **Spring displacement testbed** (built and used in primary evaluation, 2026-05-15):
+  a linearly constrained spring platform that seats each climbing hold and restricts
+  displacement to a single axis — 180° (toward the robot base, -X direction). The
+  testbed uses 2 identical compression springs in parallel, empirically calibrated as
+  F = 0.59 + 0.8 × x per spring (lbf, x in inches) → F_total = 1.18 + 1.6 × x_in lbf.
+  Holds are placed at 5 discrete orientations relative to the pull axis: 0°, ±22.5°,
+  ±45°. Orientations beyond ±45° are not tested because frictional slip is certain
+  at those angles regardless of grasp quality.
 - **Linear ratcheting mechanism**: integrated into the spring testbed; captures
-  the hold's maximum displacement even when it slips mid-trial. This converts
-  the evaluation from a binary pass/fail into a continuous displacement metric
-  (mm traveled before or during slip), enabling richer comparison across
-  grasp types and model variants.
+  the hold's maximum displacement even when it slips mid-trial. 11 teeth at
+  9.3 mm/tooth (max travel 102.3 mm). The operator enters the tooth count after
+  each pull; force is computed analytically. This converts evaluation from a binary
+  pass/fail into a continuous slip-force metric in Newtons (range 5.2 N preload to
+  33.9 N at the 11-tooth ceiling), enabling Wilcoxon-signed-rank comparisons and
+  Cohen's d effect-size estimation rather than McNemar's test on a binary outcome.
 
 ### Climbing Holds
 
@@ -153,12 +156,6 @@ that require the same grasp strategy). This tests within-category generalization
 - Mark quality as good/bad after each episode
 - Record grasp type label (crimp/sloper/pinch/jug) and hold orientation (degrees) per episode
 
-⚠️ **Data recollection required (2026-04-27)**: The 200-episode dataset collected
-prior to the spring testbed design was gathered without systematic orientation
-variation and on a flat table (not the testbed). It must be recollected with holds
-seated on the spring testbed at the 5 evaluation orientations so that training and
-evaluation distributions match.
-
 **Episode structure:**
 1. Robot resets to home pose
 2. Robot arm moves out of camera view (automated)
@@ -168,14 +165,18 @@ evaluation distributions match.
 6. Operator rates the grasp quality (good/bad)
 7. Data saved to zarr
 
-**Current dataset (2026-04-14):**
-- 200 episodes collected, 50 per grasp type, all good quality
+**Current dataset (2026-05-13, rig-collected):**
+- 200 episodes collected on the spring testbed at 5 orientations × 10 reps per orientation × 4 hold types
+- All 200 marked "good" quality
   - Hold 0 (edge_A): 50 jug | Hold 1 (edge_B): 50 crimp
   - Hold 2 (sloper): 50 sloper | Hold 3 (pinch): 50 pinch
-- 29,647 total timesteps, stored in `datasets/climbing_holds.zarr`
+- 27,821 total timesteps, stored at `/mnt/ssd/rumi_tele_datasets/climbing_holds_rig.zarr`
+- HuggingFace mirror: `rlogh/climbing-holds-pointcloud` (rig version)
 - Held-out test hold (hold 4, test_edge): not yet collected
 
-**Original target**: 4 categories × 3 holds × 60 episodes = ~720 episodes total
+**Note (2026-05-15):** an older flat-table 200-episode dataset (`climbing_holds.zarr`,
+29,647 timesteps, no orientation variation, z_min=0.006) is retained on disk for
+RGB-ablation reference only; it is NOT used for any current training.
 
 ### Observation Space
 
@@ -188,8 +189,11 @@ evaluation distributions match.
 
 **Note**: Following DP3, we use **XYZ only** (no color) in point clouds for
 better appearance generalization. The point cloud is cropped to a **calibrated
-workspace bounding box** (x=[0.30,0.85], y=[-0.35,0.35], z=[-0.02,0.30]) to
-remove table/background and ceiling/wall points.
+workspace bounding box** (x=[0.30,0.85], y=[-0.35,0.35], z=[0.027,0.40] in the
+spring-testbed configuration) to remove the rig deck, table/background, and
+ceiling/wall points while preserving the full hold geometry. (Earlier flat-table
+era used z=[0.006,0.30]; the rig elevated the hold ~2 cm, prompting the bounds
+update.)
 
 #### Static-scene assumption and single point cloud per episode
 
@@ -318,7 +322,7 @@ Primary figure of merit: **delta success rate** (taxonomy model minus no-taxonom
 
 The combination of all four simultaneously is the novel contribution. Confidence: ~82%.
 
-## 4. Implementation Status (Updated 2026-04-14)
+## 4. Implementation Status (Updated 2026-05-15)
 
 ### Phase 1: Point Cloud Data Collection Pipeline — COMPLETE
 - ✅ Multi-camera PC fusion (4 cameras → world frame → workspace crop → FPS → 1024 pts)
@@ -334,19 +338,28 @@ The combination of all four simultaneously is the novel contribution. Confidence
 - ✅ Min-max normalization to [-1, 1]
 - ✅ `--no-grasp-conditioning` ablation flag (drops GraspTypeEncoder branch)
 
-### Phase 3: Data Collection — MUST RECOLLECT
-- ⚠️ 200 previously collected episodes (50 per type) are **invalid** for the new
-  spring testbed protocol — collected on a flat table without orientation variation
-- ⏳ Recollect: 50-80 episodes per grasp type on the spring testbed, covering all
-  5 orientations (0°, ±22.5°, ±45°) with roughly equal representation
+### Phase 3: Spring Testbed Data Collection — COMPLETE (2026-05-13)
+- ✅ Spring testbed built (2 parallel springs, linear-axis constraint, 11-tooth ratchet)
+- ✅ Workspace bounds recalibrated for testbed (z_min=0.027, z_max=0.40)
+- ✅ Rig-era dataset collected: 200 episodes (50 per grasp type × 5 orientations × 10 reps)
+- ✅ Stored at `/mnt/ssd/rumi_tele_datasets/climbing_holds_rig.zarr` + HuggingFace mirror
 - ⏳ Held-out test hold (hold 4, test_edge) not yet collected
 
-### Phase 4: Training and Evaluation — IN PROGRESS
-- ✅ Train Model A (with taxonomy) — finished 2026-04-16
-- ✅ Train Model B (without taxonomy, ablation) — finished 2026-04-16
-- 🔄 Robot evaluation: paired_eval IN PROGRESS — crimp 20/20, jug 20/20, sloper in progress
-- ⏳ Wrong-label ablation — run after main paired eval completes
+### Phase 4: Training and Primary Evaluation — COMPLETE (2026-05-15)
+- ✅ Train Model A (with taxonomy) on rig dataset — `pc_with_taxonomy_rig`, best loss 0.001670 (epoch 2939)
+- ✅ Train Model B (without taxonomy, ablation) on rig dataset — `pc_no_taxonomy_rig`, best loss 0.001777 (epoch 2859)
+- ✅ Both checkpoints on HuggingFace: `rlogh/climbing-holds-rig-with-taxonomy`, `rlogh/climbing-holds-rig-no-taxonomy`
+- ✅ **Primary paired evaluation complete**: 80 paired trials (4 pairs × 5 orientations × 4 hold types)
+  - Session: `eval_results/paired_session_20260515_074256.json`
+  - Primary metric: ratchet slip force (continuous, N)
+  - All grasp types significant at $p < 0.05$ (Wilcoxon signed-rank, paired)
+  - Overall: median +5.2 N, $p < 0.001$, Cohen's $d = 0.95$
+  - Per-type effect size: pinch d=1.82 (20/20 wins), sloper d=1.08, crimp d=1.05, jug d=0.55
+  - Failure-mode rescue: complete-failure rate 44% → 10% (4.4× reduction)
+  - No order bias (Mann–Whitney p > 0.69 both models); no pegged-ratchet (right-censored) trials
+- ⏳ Wrong-label ablation — pending (causal pin on conditioning signal)
 - ⏳ Held-out hold generalization (test_edge, new physical crimp hold, eval only)
+- ⏳ Regenerate latent / action-distribution / novelty figures from rig checkpoints
 - ⏳ RGB baseline comparison (legacy zarrs preserved)
 
 ### Phase 5: Mechanistic Analysis — COMPLETE (2026-04-20)
@@ -370,13 +383,17 @@ non-jug grasp types. On real dexterous hardware this extra per-rollout wobble
 misses the hold. The taxonomy label is best characterised as a **precision
 regularizer** that tightens the sampling distribution around the correct
 subtype (analogous to CFG in image diffusion / low-temperature sampling in
-LLMs), not as a mode selector. This prediction matches the per-type eval
-results exactly: W/o fails ~80% on crimp/sloper/pinch (precision-critical,
-thin/narrow features) but is statistically indistinguishable from With on
-jug (precision-insensitive, deep pocket with mm-scale slack, p=0.688 ns).
+LLMs), not as a mode selector.
 
-This is the central mechanistic claim of the paper going forward. See
-`IMPLEMENTATION_LOG.md` Session 6 (2026-04-20) for numbers and figures.
+The mechanistic prediction is confirmed by the Phase-4 hardware evaluation:
+Cohen's d ordering across grasp types (pinch 1.82 > sloper 1.08 ≈ crimp 1.05
+≫ jug 0.55) recovers the precision-tolerance ordering exactly, with the
+geometrically slack jug producing the smallest (though still statistically
+significant) effect.
+
+This is the central mechanistic claim of the paper. See
+`IMPLEMENTATION_LOG.md` Session 6 (latent / action / novelty analysis) and
+Session 7 (primary hardware evaluation) for full numbers and figures.
 
 ## 5. Grasp Type Label — Manual Input
 
@@ -408,7 +425,10 @@ keeping the policy's job focused on *how* to grasp rather than *what* grasp to u
 | 2 | Collect pilot data (1 hold, 50 demos), validate pipeline | ✅ Done |
 | 3 | Implement PointNet encoder + grasp type conditioning in train.py | ✅ Done |
 | 4 | Train pilot model, debug, iterate | ✅ Done |
-| 5-7 | Full data collection across all holds (200 episodes) | ✅ Done (2026-04-14) |
-| 8 | Train both models (with/without taxonomy, ~11h each) | ⏳ Next |
-| 9 | Robot evaluation (160+ trials) + statistical analysis | ⏳ |
-| 10 | Write paper, prepare benchmark release | ⏳ |
+| 5–7 | Initial 200-episode flat-table dataset | ✅ Done (2026-04-14, later superseded) |
+| 8 | Mechanistic / latent / action-distribution analysis | ✅ Done (2026-04-20) |
+| 9 | Build spring testbed, recollect rig dataset | ✅ Done (2026-05-13) |
+| 10 | Train both rig models, upload checkpoints to HuggingFace | ✅ Done (2026-05-15) |
+| 11 | Primary paired evaluation (80 trials, ratchet slip-force) | ✅ Done (2026-05-15) |
+| 12 | Analysis figures + paper-ready methodology / observations docs | ✅ Done (2026-05-15) |
+| 13+ | Wrong-label ablation, held-out hold, final paper writing | ⏳ Future |

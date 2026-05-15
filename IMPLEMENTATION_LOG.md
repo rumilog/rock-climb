@@ -304,6 +304,67 @@ label rather than on any other downstream difference. ~30 eval trials.
 
 **Files also updated:** `tasks/todo.md` (workflow description), `tasks/lessons.md` (3 new entries: paired protocol motivation; per-trial PC capture; save-first-on-signal + resume design).
 
+### Session 7 (2026-05-13 → 2026-05-15) — Spring Testbed Eval Pipeline + Primary Evaluation Complete
+
+**Files changed:**
+- `data_collection/paired_eval.py` — orientation field per batch, ratchet prompt + force computation, impedance pull, kz=2000 default, clean-completion shutdown, force summary at session end, default checkpoint paths point at `*_rig`, session JSON now records all pull-stiffness parameters so resume works correctly
+- `data_collection/evaluate.py` — matching pull/ratchet changes
+- `eval_results/generate_ratchet_figures.py` (NEW) — 8 force-based figures (boxplots, scatter, orientation lines, per-pair delta, CDF, effect sizes, per-grasp scatter, orientation heatmap)
+- `eval_results/display_results.py` (NEW) — coloured terminal table + publication-quality results PNG with bootstrap 95% CI for Cohen's d
+- `eval_results/generate_training_curves.py` (NEW) — loss-vs-epoch parsing for both models
+- `eval_results/analyze_observations.py` (NEW) — failure-mode breakdown, variance comparison, order-effect Mann–Whitney, per-orientation × grasp dive
+- `PAPER_METHODOLOGY.md` (NEW) — paper-ready methodology reference (compute specs, hardware, dataset, statistical methods, reproducibility, limitations, pre-registration)
+- `OBSERVATIONS.md` (NEW) — pre-written observation paragraphs with all numbers + quote-ready sentences
+- `CLAUDE.md`, `HANDOFF.md`, `tasks/todo.md`, `RESEARCH_PLAN.md`, `PROGRESS_UPDATE.md` — refreshed with current numbers and analysis-reproduction instructions
+- `Paper writing/main.tex` — abstract updated, §5.2 Robot Evaluation rewritten with full 80-pair results table, Discussion updated, Conclusion updated
+
+**Hardware:**
+- Built spring displacement testbed: 2 identical compression springs in parallel (empirical F = 0.59 + 0.8·x lbf per spring, x in inches), constrained to single axis (180° toward robot base), 11-tooth linear ratchet at 9.3 mm/tooth (max travel 102.3 mm, max force ≈33.9 N at the ratchet ceiling).
+
+**Pull design iteration:**
+- v1: 5 cm position-control pull → too short
+- v2: 10.5 cm impedance kx=4000, ky=100, kz=100 → arm sagged ~10 cm under LEAP-hand weight (kz too soft)
+- v3: 10.5 cm impedance kx=4000, ky=100, kz=2000 → only ~5 mm static droop, much better
+- v4 (final): 13 cm impedance with same stiffness → adds 2.5 cm headroom for strong grips, still no pegged-ratchet trials in the final session
+
+**Eval session JSON enhancements:**
+- Per-pair `orientation_deg` field (logged from operator-entered angle at each batch start)
+- Per-trial `ratchet` dict (teeth, displacement_mm, force_lbf, force_N) under `pc_stats[model]`
+- Per-trial `pull_angle_deg` field (always 180.0 on this testbed)
+- Session-level `pull_stiffness` / `pull_lateral_stiffness` / `pull_z_stiffness` / `pull_z_bias` / `pull_dist_m`
+- `--batches` spec extended to `grasp:hold:pairs[:orientation_deg]` so a single command runs all 5 orientations per hold
+- Save-then-teardown ordering hardened: a successful-completion path now also calls `_cleanup()` so the C++ destructor race in pyrealsense2 + FrankaArm doesn't leave the process hanging on `terminate called without an active exception`
+- Resume command printed at quit-time now includes `--pull-dist` automatically when a pull test is active
+
+**Primary evaluation (2026-05-15, 80 paired trials):**
+
+| Grasp  | WITH median | WITHOUT median | Δ      | Wilcoxon p | Cohen's d |
+|--------|-------------|----------------|--------|------------|-----------|
+| Crimp  | 15.7 N      | 9.2 N          | +6.5 N | 0.0007     | 1.05 ***  |
+| Jug    | 15.7 N      | 14.4 N         | +1.3 N | 0.0278     | 0.55 *    |
+| Sloper | 7.9 N       | 5.2 N          | +2.6 N | 0.0012     | 1.08 **   |
+| Pinch  | 15.7 N      | 9.2 N          | +6.5 N | <0.001     | 1.82 ***  |
+| **Overall** | **13.1 N** | **7.9 N**  | **+5.2 N** | **<0.001** | **0.95 \*\*\*** |
+
+Effect-size ordering perfectly matches the precision-regularizer prediction (precision-critical
+holds gain most, slack jug gains least). Failure-mode rescue is the dominant mechanism:
+complete-failure rate drops 44% → 10% (4.4×), strong-grip rate rises 1% → 9% (7×). Per-pair
+winner counts: 61 WITH, 14 tie, 5 WITHOUT (pinch was a perfect 20/20 WITH sweep). Strict
+order alternation eliminated any order bias (Mann–Whitney p > 0.69 both models). No
+right-censoring — zero trials pegged the ratchet at 11 teeth.
+
+**Both rig-trained checkpoints published on HuggingFace:**
+- `rlogh/climbing-holds-rig-with-taxonomy` (uploaded 2026-05-15 from this machine)
+- `rlogh/climbing-holds-rig-no-taxonomy` (trained on separate machine, uploaded 2026-05-14)
+
+**Next outstanding experiments** (see tasks/todo.md):
+1. Wrong-label ablation — feed the WITH-taxonomy model the wrong grasp_type label and verify
+   the effect inverts, causally pinning the conditioning rather than any downstream artefact
+2. Held-out hold generalisation — evaluate on a new physical crimp hold (test_edge / hold 4)
+   never seen in training
+3. Regenerate latent / action-distribution / novelty figures from the new rig-trained
+   checkpoints (current versions in `eval_results/figures/` are from the pre-rig pair)
+
 ### Session 3 (2026-03-16) — Research Architecture Discussion
 - Clarified that 1024-pt XYZ point cloud is appropriate for the diffusion policy (trajectory planning) but marginal for classifying hold grasp type from shape alone (~30-150 points land on the hold itself).
 - Confirmed that the diffusion policy does NOT need to predict grasp type — it receives it as a conditioning label. Existing data collection workflow is correct and untouched.
