@@ -340,7 +340,8 @@ log it in the per-pair eval JSON / lab notebook instead.
 **Pull control:** impedance control with **differential per-axis stiffness**:
 - X (pull axis, -X direction): `kx = 4000 N/m` — stiff, drives the 10.5 cm motion
 - Y (lateral): `ky = 100 N/m` — compliant, allows natural hand flex side-to-side
-- Z (vertical): `kz = 100 N/m` — compliant, allows natural hand flex up/down
+- Z (vertical): `kz = 2000 N/m` — must hold LEAP hand (~1 kg = ~10 N) against gravity.
+  At kz=100 the arm droops ~10 cm under hand weight; at kz=2000 droop ≈ 5 mm.
 
 Defaults are baked in; override with `--pull-stiffness` (kx), `--pull-lateral-stiffness`
 (ky), `--pull-z-stiffness` (kz), `--pull-z-bias` (upward Z offset to counter LEAP
@@ -350,18 +351,20 @@ due to spring back-force; this is expected — readings ≥ 9 = strong grip.
 ```bash
 # Full evaluation session — all 5 orientations per hold, 4 pairs each (80 pairs total)
 # Format: grasp:hold:pairs:orientation_deg
-python3 paired_eval.py --pull-dist 0.105 --batches \
-  jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
-  crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
-  sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
-  pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
+# IMPORTANT: --batches value MUST be quoted and continuation lines MUST start at column 0
+# (no leading whitespace), otherwise bash splits the comma-list into separate argv tokens.
+python3 paired_eval.py --pull-dist 0.130 --batches "\
+jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
+crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
+sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
+pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45"
 
 # Single hold session (one hold, all 5 orientations):
-python3 paired_eval.py --pull-dist 0.105 --batches \
+python3 paired_eval.py --pull-dist 0.130 --batches \
   jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45
 
 # Single model evaluation with spring testbed
-python3 evaluate.py --checkpoint ... --pull-dist 0.105
+python3 evaluate.py --checkpoint ... --pull-dist 0.130
 ```
 
 **Data-collection (teleop) — no `--pull-dist` flag.** Pulls happen only at

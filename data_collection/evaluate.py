@@ -172,7 +172,7 @@ class PolicyEvaluator:
                  action_horizon=8, dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10, grasp_type=None, zero_pc=False,
                  pull_dist=None, pull_stiffness=4000.0,
-                 pull_lateral_stiffness=100.0, pull_z_stiffness=100.0,
+                 pull_lateral_stiffness=100.0, pull_z_stiffness=2000.0,
                  pull_z_bias=0.0):
         self.hold_id = hold_id
         self.ckpt_name = Path(ckpt_path).parent.name  # e.g. "pc_with_taxonomy"
@@ -920,7 +920,8 @@ def main():
     parser.add_argument("--pull-dist", type=float, default=None,
                         help="If set, execute a spring-testbed pull test after each rollout: "
                              "arm moves this many meters toward robot base (180°, -X). "
-                             "Standard value: 0.105 (10.5 cm, 11 ratchet teeth). "
+                             "Standard value: 0.130 (13 cm). Ratchet range is 0–102.3 mm (11 teeth); "
+                             "strong grips that travel past 102.3 mm read 11 teeth (≥33.9 N). "
                              "After the pull, enter the ratchet tooth count (0–11); "
                              "the script computes and logs displacement + slip force.")
     parser.add_argument("--pull-angle", type=float, default=180.0,
@@ -934,9 +935,11 @@ def main():
     parser.add_argument("--pull-lateral-stiffness", type=float, default=100.0,
                         help="Y-axis (lateral) Cartesian impedance stiffness in N/m. "
                              "Default 100 — compliant, allows natural side-to-side hand flex.")
-    parser.add_argument("--pull-z-stiffness", type=float, default=100.0,
+    parser.add_argument("--pull-z-stiffness", type=float, default=2000.0,
                         help="Z-axis (vertical) Cartesian impedance stiffness in N/m. "
-                             "Default 100 — compliant, allows natural up/down hand flex.")
+                             "Default 2000. Must be high enough to hold the LEAP hand (~1 kg, "
+                             "~10 N gravity load) against gravity without sagging; at 100 N/m "
+                             "the arm droops ~10 cm. 2000 N/m → ~5 mm static droop, negligible.")
     parser.add_argument("--pull-z-bias", type=float, default=0.0,
                         help="Upward Z offset (meters) added to pull target pose. "
                              "Compensates for LEAP hand weight not in Franka gravity model. "
@@ -967,7 +970,8 @@ def main():
     evaluator.pull_angle = args.pull_angle
 
     def _cleanup(signum=None, frame=None):
-        print("\nCaught interrupt — cleaning up...")
+        # Called from SIGINT, exception, AND normal completion.
+        print("\nCleaning up hardware...")
 
         def _do_cleanup():
             try:
@@ -1004,6 +1008,12 @@ def main():
         _cleanup()
     except Exception as e:
         print(f"\nUnexpected error: {e}")
+        _cleanup()
+    else:
+        # Normal completion: tear down pyrealsense / FrankaArm threads cleanly
+        # so the C++ destructors don't throw "terminate called without an
+        # active exception" and hang the process. _cleanup() calls os._exit(0).
+        print("\nEvaluation complete.")
         _cleanup()
 
 

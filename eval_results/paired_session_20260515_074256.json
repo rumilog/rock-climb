@@ -1,0 +1,4882 @@
+{
+  "session_id": "20260515_074256",
+  "mode": "scripted",
+  "with_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_with_taxonomy_rig/best.pt",
+  "no_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_no_taxonomy_rig/best.pt",
+  "max_steps": 200,
+  "action_horizon": 8,
+  "inference_steps": 10,
+  "pull_dist_m": 0.13,
+  "pull_stiffness": 4000.0,
+  "pull_lateral_stiffness": 100.0,
+  "pull_z_stiffness": 2000.0,
+  "pull_z_bias": 0.0,
+  "first_model": "WITHOUT_TAXONOMY",
+  "planned_batches": [
+    [
+      "jug",
+      0,
+      4,
+      -45.0
+    ],
+    [
+      "jug",
+      0,
+      4,
+      -22.5
+    ],
+    [
+      "jug",
+      0,
+      4,
+      0.0
+    ],
+    [
+      "jug",
+      0,
+      4,
+      22.5
+    ],
+    [
+      "jug",
+      0,
+      4,
+      45.0
+    ],
+    [
+      "crimp",
+      1,
+      4,
+      -45.0
+    ],
+    [
+      "crimp",
+      1,
+      4,
+      -22.5
+    ],
+    [
+      "crimp",
+      1,
+      4,
+      0.0
+    ],
+    [
+      "crimp",
+      1,
+      4,
+      22.5
+    ],
+    [
+      "crimp",
+      1,
+      4,
+      45.0
+    ],
+    [
+      "sloper",
+      2,
+      4,
+      -45.0
+    ],
+    [
+      "sloper",
+      2,
+      4,
+      -22.5
+    ],
+    [
+      "sloper",
+      2,
+      4,
+      0.0
+    ],
+    [
+      "sloper",
+      2,
+      4,
+      22.5
+    ],
+    [
+      "sloper",
+      2,
+      4,
+      45.0
+    ],
+    [
+      "pinch",
+      3,
+      4,
+      -45.0
+    ],
+    [
+      "pinch",
+      3,
+      4,
+      -22.5
+    ],
+    [
+      "pinch",
+      3,
+      4,
+      0.0
+    ],
+    [
+      "pinch",
+      3,
+      4,
+      22.5
+    ],
+    [
+      "pinch",
+      3,
+      4,
+      45.0
+    ]
+  ],
+  "batches": [
+    {
+      "batch": 0,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 4,
+      "orientation_deg": -45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 1,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 4,
+      "orientation_deg": -22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 2,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 4,
+      "orientation_deg": 0.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 3,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 4,
+      "orientation_deg": 22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 4,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 4,
+      "orientation_deg": 45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 5,
+      "grasp_type": "crimp",
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "n_pairs": 4,
+      "orientation_deg": -45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 6,
+      "grasp_type": "crimp",
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "n_pairs": 4,
+      "orientation_deg": -22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 7,
+      "grasp_type": "crimp",
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "n_pairs": 4,
+      "orientation_deg": 0.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 8,
+      "grasp_type": "crimp",
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "n_pairs": 4,
+      "orientation_deg": 22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 9,
+      "grasp_type": "crimp",
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "n_pairs": 4,
+      "orientation_deg": 45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 10,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 4,
+      "orientation_deg": -45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 11,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 4,
+      "orientation_deg": -22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 12,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 4,
+      "orientation_deg": 0.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 13,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 4,
+      "orientation_deg": 22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 14,
+      "grasp_type": "sloper",
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "n_pairs": 4,
+      "orientation_deg": 45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 15,
+      "grasp_type": "pinch",
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "n_pairs": 4,
+      "orientation_deg": -45.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 16,
+      "grasp_type": "pinch",
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "n_pairs": 4,
+      "orientation_deg": -22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 17,
+      "grasp_type": "pinch",
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "n_pairs": 4,
+      "orientation_deg": 0.0,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 18,
+      "grasp_type": "pinch",
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "n_pairs": 4,
+      "orientation_deg": 22.5,
+      "completed_pairs": 4
+    },
+    {
+      "batch": 19,
+      "grasp_type": "pinch",
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "n_pairs": 4,
+      "orientation_deg": 45.0,
+      "completed_pairs": 4
+    }
+  ],
+  "pairs": [
+    {
+      "pair": 0,
+      "batch": 0,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7671838998794556,
+            -0.03524826839566231,
+            0.047765497118234634
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7677156329154968,
+            -0.03655213117599487,
+            0.047344986349344254
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:46:16.701578",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 1,
+      "batch": 0,
+      "batch_pair": 1,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7674673199653625,
+            -0.03619667887687683,
+            0.04743637144565582
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7666097283363342,
+            -0.03608524426817894,
+            0.04758947342634201
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:49:16.553046",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 2,
+      "batch": 0,
+      "batch_pair": 2,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.765964150428772,
+            -0.035901110619306564,
+            0.04796478524804115
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7660949230194092,
+            -0.035792026668787,
+            0.047661300748586655
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:52:46.170156",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 3,
+      "batch": 0,
+      "batch_pair": 3,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7670810222625732,
+            -0.03675730526447296,
+            0.04761700704693794
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7670775055885315,
+            -0.036242447793483734,
+            0.04786624759435654
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:55:19.307183",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 4,
+      "batch": 1,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7336849570274353,
+            -0.039885517209768295,
+            0.0473380908370018
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7672595381736755,
+            -0.039054907858371735,
+            0.047899045050144196
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:58:33.027867",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 5,
+      "batch": 1,
+      "batch_pair": 1,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7682117223739624,
+            -0.0389028936624527,
+            0.04787971451878548
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7679017782211304,
+            -0.03920811787247658,
+            0.04785230755805969
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:02:26.565587",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 6,
+      "batch": 1,
+      "batch_pair": 2,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7691091299057007,
+            -0.039232417941093445,
+            0.04778565093874931
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7686785459518433,
+            -0.03958935663104057,
+            0.04796310514211655
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 7,
+            "displacement_mm": 65.1,
+            "force_lbf": 5.281,
+            "force_N": 23.49
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:10:31.899269",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 7,
+      "batch": 1,
+      "batch_pair": 3,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7677858471870422,
+            -0.03944220393896103,
+            0.04795931652188301
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7677976489067078,
+            -0.0399680994451046,
+            0.047751106321811676
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:12:33.118159",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 8,
+      "batch": 2,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7661891579627991,
+            -0.03037998080253601,
+            0.04802228882908821
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7645835280418396,
+            -0.029534606263041496,
+            0.048057835549116135
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:14:53.609876",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 9,
+      "batch": 2,
+      "batch_pair": 1,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7624990940093994,
+            -0.03268587961792946,
+            0.04817128926515579
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7619220614433289,
+            -0.0321882888674736,
+            0.04804035648703575
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:18:07.667148",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 10,
+      "batch": 2,
+      "batch_pair": 2,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7634084820747375,
+            -0.03274096921086311,
+            0.04836085066199303
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7617402076721191,
+            -0.0327545627951622,
+            0.048098642379045486
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:20:33.596410",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 11,
+      "batch": 2,
+      "batch_pair": 3,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7629254460334778,
+            -0.03217899054288864,
+            0.04790043830871582
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7617508172988892,
+            -0.03231531009078026,
+            0.048240114003419876
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:24:49.565593",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 12,
+      "batch": 3,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7630816102027893,
+            -0.03961486369371414,
+            0.04812261462211609
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7630718946456909,
+            -0.03965408354997635,
+            0.0477914959192276
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:27:17.651104",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 13,
+      "batch": 3,
+      "batch_pair": 1,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.762340784072876,
+            -0.03969920054078102,
+            0.04785116761922836
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7627978920936584,
+            -0.03868107497692108,
+            0.04757371172308922
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:52:21.974797",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 14,
+      "batch": 3,
+      "batch_pair": 2,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7612988352775574,
+            -0.038238316774368286,
+            0.04794127494096756
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7624527215957642,
+            -0.03742595389485359,
+            0.04785700514912605
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T08:57:33.547936",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 15,
+      "batch": 3,
+      "batch_pair": 3,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7618957757949829,
+            -0.037832632660865784,
+            0.04841143637895584
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7618817687034607,
+            -0.037770822644233704,
+            0.047868650406599045
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:00:29.981156",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 16,
+      "batch": 4,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7626318335533142,
+            -0.038893621414899826,
+            0.04774313420057297
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7607839703559875,
+            -0.037824954837560654,
+            0.04791375249624252
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:05:32.710682",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 17,
+      "batch": 4,
+      "batch_pair": 1,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7605127096176147,
+            -0.038205258548259735,
+            0.04779250547289848
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7606267333030701,
+            -0.03866608068346977,
+            0.04806021228432655
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:10:07.714798",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 18,
+      "batch": 4,
+      "batch_pair": 2,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7610886096954346,
+            -0.03814486414194107,
+            0.04782755672931671
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7624990344047546,
+            -0.038473229855298996,
+            0.04801240935921669
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:16:35.231514",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 19,
+      "batch": 4,
+      "batch_pair": 3,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7445136904716492,
+            -0.03845508024096489,
+            0.047647107392549515
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7613134384155273,
+            -0.037912603467702866,
+            0.04762986674904823
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:20:25.170076",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 20,
+      "batch": 5,
+      "batch_pair": 0,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7768881320953369,
+            -0.025319460779428482,
+            0.03828389197587967
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7779910564422607,
+            -0.026654597371816635,
+            0.03840335085988045
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:23:09.652522",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 21,
+      "batch": 5,
+      "batch_pair": 1,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7757185101509094,
+            -0.026679852977395058,
+            0.03845437616109848
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 7,
+            "displacement_mm": 65.1,
+            "force_lbf": 5.281,
+            "force_N": 23.49
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7738392353057861,
+            -0.026570457965135574,
+            0.03870498761534691
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:26:11.515780",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 22,
+      "batch": 5,
+      "batch_pair": 2,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7759579420089722,
+            -0.026333972811698914,
+            0.03852584585547447
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7763022780418396,
+            -0.026588832959532738,
+            0.038533639162778854
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:28:27.720220",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 23,
+      "batch": 5,
+      "batch_pair": 3,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7757490277290344,
+            -0.02707962691783905,
+            0.03854779899120331
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.774075984954834,
+            -0.026868285611271858,
+            0.03857792168855667
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:31:21.655295",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 24,
+      "batch": 6,
+      "batch_pair": 0,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7758992910385132,
+            -0.024019533768296242,
+            0.038002606481313705
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 8,
+            "displacement_mm": 74.4,
+            "force_lbf": 5.867,
+            "force_N": 26.1
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7711746692657471,
+            -0.024000389501452446,
+            0.03847523406147957
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 9,
+            "displacement_mm": 83.7,
+            "force_lbf": 6.452,
+            "force_N": 28.7
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:34:13.621129",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 25,
+      "batch": 6,
+      "batch_pair": 1,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7801896929740906,
+            -0.030355392023921013,
+            0.03769794479012489
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 8,
+            "displacement_mm": 74.4,
+            "force_lbf": 5.867,
+            "force_N": 26.1
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7781551480293274,
+            -0.03216689079999924,
+            0.03776003420352936
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:54:42.689129",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 26,
+      "batch": 6,
+      "batch_pair": 2,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7800819873809814,
+            -0.03238781914114952,
+            0.03799841180443764
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7787144184112549,
+            -0.03274913877248764,
+            0.03793874382972717
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 8,
+            "displacement_mm": 74.4,
+            "force_lbf": 5.867,
+            "force_N": 26.1
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T09:58:36.992292",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 27,
+      "batch": 6,
+      "batch_pair": 3,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7777796387672424,
+            -0.03470912203192711,
+            0.038209252059459686
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 8,
+            "displacement_mm": 74.4,
+            "force_lbf": 5.867,
+            "force_N": 26.1
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.779424786567688,
+            -0.03335568681359291,
+            0.038307398557662964
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:02:53.913842",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 28,
+      "batch": 7,
+      "batch_pair": 0,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7790113687515259,
+            -0.030272318050265312,
+            0.038008078932762146
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7788976430892944,
+            -0.030879992991685867,
+            0.037906624376773834
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:11:17.576830",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 29,
+      "batch": 7,
+      "batch_pair": 1,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.778635561466217,
+            -0.030260972678661346,
+            0.03799518942832947
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 9,
+            "displacement_mm": 83.7,
+            "force_lbf": 6.452,
+            "force_N": 28.7
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7766011953353882,
+            -0.028852181509137154,
+            0.037836771458387375
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:15:02.743327",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 30,
+      "batch": 7,
+      "batch_pair": 2,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7774878740310669,
+            -0.029931461438536644,
+            0.03808930516242981
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7775948643684387,
+            -0.03030775673687458,
+            0.037762172520160675
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:18:27.666749",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 31,
+      "batch": 7,
+      "batch_pair": 3,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7781554460525513,
+            -0.028939349576830864,
+            0.0380224734544754
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.778403639793396,
+            -0.029558846727013588,
+            0.0379122793674469
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:20:54.315546",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 32,
+      "batch": 8,
+      "batch_pair": 0,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7792475819587708,
+            -0.03285474330186844,
+            0.03808804973959923
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7794839143753052,
+            -0.03167813643813133,
+            0.038070205599069595
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:23:43.523865",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 33,
+      "batch": 8,
+      "batch_pair": 1,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7755049467086792,
+            -0.03491135686635971,
+            0.03796910122036934
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7758720517158508,
+            -0.035771384835243225,
+            0.03769686073064804
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:26:09.993229",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 34,
+      "batch": 8,
+      "batch_pair": 2,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7753029465675354,
+            -0.03686441108584404,
+            0.03758588433265686
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7766816020011902,
+            -0.03676366060972214,
+            0.037563081830739975
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:34:39.687198",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 35,
+      "batch": 8,
+      "batch_pair": 3,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7765132784843445,
+            -0.03613048791885376,
+            0.03776126354932785
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7761321067810059,
+            -0.03568752482533455,
+            0.037773314863443375
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:37:16.721109",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 36,
+      "batch": 9,
+      "batch_pair": 0,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7825614213943481,
+            -0.033842142671346664,
+            0.03790736198425293
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7826525568962097,
+            -0.03427667170763016,
+            0.037780437618494034
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:40:07.913504",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 37,
+      "batch": 9,
+      "batch_pair": 1,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7819624543190002,
+            -0.033127713948488235,
+            0.03792854771018028
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7820358276367188,
+            -0.03256251662969589,
+            0.03796343877911568
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:42:05.838567",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 38,
+      "batch": 9,
+      "batch_pair": 2,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7822717428207397,
+            -0.03301236033439636,
+            0.038060471415519714
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7826517820358276,
+            -0.03231978788971901,
+            0.03804692253470421
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:44:15.773555",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 39,
+      "batch": 9,
+      "batch_pair": 3,
+      "hold_id": 1,
+      "hold_name": "edge_B",
+      "grasp_type": "crimp",
+      "grasp_type_id": 0,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7829557657241821,
+            -0.03251277282834053,
+            0.038028862327337265
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7829181551933289,
+            -0.030303366482257843,
+            0.037962522357702255
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:46:22.852738",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 40,
+      "batch": 10,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7785323262214661,
+            -0.025457413867115974,
+            0.04793946072459221
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7834851741790771,
+            -0.024683376774191856,
+            0.048246242105960846
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:49:07.789794",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 41,
+      "batch": 10,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7839906811714172,
+            -0.02525309845805168,
+            0.04846706613898277
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.785009503364563,
+            -0.026125865057110786,
+            0.048325102776288986
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:51:16.568271",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 42,
+      "batch": 10,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7856264710426331,
+            -0.025513116270303726,
+            0.04853073135018349
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7855687141418457,
+            -0.026049939915537834,
+            0.04846806824207306
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:53:46.906692",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 43,
+      "batch": 10,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7846280336380005,
+            -0.025593053549528122,
+            0.0482337549328804
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7837470173835754,
+            -0.02529168874025345,
+            0.048339661210775375
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:56:01.800686",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 44,
+      "batch": 11,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7881333231925964,
+            -0.02625308558344841,
+            0.04812249541282654
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.788456380367279,
+            -0.026118963956832886,
+            0.04820828512310982
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T10:59:37.107785",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 45,
+      "batch": 11,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7854735255241394,
+            -0.025862708687782288,
+            0.047957103699445724
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7861968278884888,
+            -0.026895377784967422,
+            0.047896791249513626
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:29:20.065015",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 46,
+      "batch": 11,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7878658771514893,
+            -0.026138251647353172,
+            0.047885943204164505
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7869774699211121,
+            -0.02589196152985096,
+            0.048242222517728806
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:31:40.509532",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 47,
+      "batch": 11,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7860413789749146,
+            -0.02632509171962738,
+            0.048059944063425064
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7860467433929443,
+            -0.02607307769358158,
+            0.04815349355340004
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:42:11.637130",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 48,
+      "batch": 12,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7837799191474915,
+            -0.029481645673513412,
+            0.04789507016539574
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7849122881889343,
+            -0.029386678710579872,
+            0.04801449179649353
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:44:49.270274",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 49,
+      "batch": 12,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7838204503059387,
+            -0.02876700460910797,
+            0.04799119383096695
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.783981442451477,
+            -0.028568465262651443,
+            0.0477900393307209
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:49:10.810121",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 50,
+      "batch": 12,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7843447923660278,
+            -0.028137048706412315,
+            0.047708362340927124
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7838481068611145,
+            -0.029570888727903366,
+            0.04800814390182495
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:51:12.323564",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 51,
+      "batch": 12,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7839092016220093,
+            -0.029108580201864243,
+            0.04794403910636902
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.783424437046051,
+            -0.028886564075946808,
+            0.04799177497625351
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:53:09.456603",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 52,
+      "batch": 13,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7844924330711365,
+            -0.028390461578965187,
+            0.04807272180914879
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7847838401794434,
+            -0.02758624032139778,
+            0.048040058463811874
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:55:59.803773",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 53,
+      "batch": 13,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7844569087028503,
+            -0.02879943512380123,
+            0.04820750653743744
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7848976254463196,
+            -0.029252761974930763,
+            0.048272889107465744
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T11:59:29.947752",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 54,
+      "batch": 13,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7843682169914246,
+            -0.028740916401147842,
+            0.048231445252895355
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7846695184707642,
+            -0.029118990525603294,
+            0.04811752215027809
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:02:47.262981",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 55,
+      "batch": 13,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7833850383758545,
+            -0.02884964644908905,
+            0.04813317954540253
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7845267057418823,
+            -0.028979619964957237,
+            0.04819948971271515
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:09:02.089711",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 56,
+      "batch": 14,
+      "batch_pair": 0,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7801806330680847,
+            -0.03883941471576691,
+            0.047803908586502075
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7810853719711304,
+            -0.03837578371167183,
+            0.04798503965139389
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:11:49.103492",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 57,
+      "batch": 14,
+      "batch_pair": 1,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7791460156440735,
+            -0.03822159022092819,
+            0.048061709851026535
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7796895503997803,
+            -0.03866942599415779,
+            0.04770215228199959
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:15:02.593799",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 58,
+      "batch": 14,
+      "batch_pair": 2,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7806779146194458,
+            -0.038771722465753555,
+            0.04795895889401436
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7803231477737427,
+            -0.0389229916036129,
+            0.04803084209561348
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:17:10.023452",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 59,
+      "batch": 14,
+      "batch_pair": 3,
+      "hold_id": 2,
+      "hold_name": "sloper",
+      "grasp_type": "sloper",
+      "grasp_type_id": 1,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7800666689872742,
+            -0.03852798044681549,
+            0.04799691215157509
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7739882469177246,
+            -0.037927184253931046,
+            0.04759306460618973
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:20:41.955766",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 60,
+      "batch": 15,
+      "batch_pair": 0,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7728524804115295,
+            -0.024713726714253426,
+            0.04638798162341118
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7700331807136536,
+            -0.02489837259054184,
+            0.046284522861242294
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:24:12.246364",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 61,
+      "batch": 15,
+      "batch_pair": 1,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7703240513801575,
+            -0.026019254699349403,
+            0.046394526958465576
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7708877325057983,
+            -0.02601686865091324,
+            0.04617989435791969
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:30:11.532364",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 62,
+      "batch": 15,
+      "batch_pair": 2,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7701223492622375,
+            -0.025660812854766846,
+            0.046081122010946274
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7695713043212891,
+            -0.025845421478152275,
+            0.04602477699518204
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:32:31.752914",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 63,
+      "batch": 15,
+      "batch_pair": 3,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7723304033279419,
+            -0.027335790917277336,
+            0.045979127287864685
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7694975137710571,
+            -0.02682933211326599,
+            0.04603783041238785
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:41:10.892417",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 64,
+      "batch": 16,
+      "batch_pair": 0,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7552622556686401,
+            -0.03199736773967743,
+            0.0463406965136528
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7707844376564026,
+            -0.03255460038781166,
+            0.045748427510261536
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:43:41.006879",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 65,
+      "batch": 16,
+      "batch_pair": 1,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7710307836532593,
+            -0.03162539005279541,
+            0.04613977298140526
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7721514105796814,
+            -0.030496932566165924,
+            0.04592368006706238
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:45:46.297442",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 66,
+      "batch": 16,
+      "batch_pair": 2,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7713475823402405,
+            -0.03346240520477295,
+            0.04586293175816536
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7709035873413086,
+            -0.03169775754213333,
+            0.04605986922979355
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:47:59.722753",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 67,
+      "batch": 16,
+      "batch_pair": 3,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": -22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7673961520195007,
+            -0.0326044037938118,
+            0.04611668735742569
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7706267237663269,
+            -0.03032711334526539,
+            0.046244267374277115
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:52:04.336877",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 68,
+      "batch": 17,
+      "batch_pair": 0,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7707470655441284,
+            -0.02801736444234848,
+            0.046622082591056824
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7727969884872437,
+            -0.026017146185040474,
+            0.04654015228152275
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T12:55:53.057297",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 69,
+      "batch": 17,
+      "batch_pair": 1,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7723265886306763,
+            -0.028997566550970078,
+            0.04664847254753113
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7711266875267029,
+            -0.026565998792648315,
+            0.04658171907067299
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:01:34.613120",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 70,
+      "batch": 17,
+      "batch_pair": 2,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7702271342277527,
+            -0.02651446871459484,
+            0.046790868043899536
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7704270482063293,
+            -0.02622431144118309,
+            0.04654720425605774
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:04:14.899129",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 71,
+      "batch": 17,
+      "batch_pair": 3,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7718715071678162,
+            -0.02643687278032303,
+            0.046626824885606766
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.771415114402771,
+            -0.03042389452457428,
+            0.04655627906322479
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:10:25.203800",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 72,
+      "batch": 18,
+      "batch_pair": 0,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7702381610870361,
+            -0.0368596687912941,
+            0.046150628477334976
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7711268067359924,
+            -0.037881288677453995,
+            0.046694185584783554
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:14:41.789069",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 73,
+      "batch": 18,
+      "batch_pair": 1,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7694909572601318,
+            -0.03607112541794777,
+            0.046276241540908813
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7694790959358215,
+            -0.03609016537666321,
+            0.04627510905265808
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:18:39.510209",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 74,
+      "batch": 18,
+      "batch_pair": 2,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7697256207466125,
+            -0.035724710673093796,
+            0.04613260552287102
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7710899710655212,
+            -0.03610540181398392,
+            0.04640217125415802
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:20:56.370538",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 75,
+      "batch": 18,
+      "batch_pair": 3,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 22.5,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7692396640777588,
+            -0.03604801744222641,
+            0.04619966074824333
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 5,
+            "displacement_mm": 46.5,
+            "force_lbf": 4.109,
+            "force_N": 18.28
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7710414528846741,
+            -0.0342310331761837,
+            0.04615381732583046
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:25:17.745010",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 76,
+      "batch": 19,
+      "batch_pair": 0,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7736970782279968,
+            -0.03722650185227394,
+            0.04573448747396469
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7713618874549866,
+            -0.03613797575235367,
+            0.04601087048649788
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:30:24.059644",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 77,
+      "batch": 19,
+      "batch_pair": 1,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7475399971008301,
+            -0.03573763743042946,
+            0.04543059319257736
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 3,
+            "displacement_mm": 27.9,
+            "force_lbf": 2.937,
+            "force_N": 13.06
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7720578908920288,
+            -0.03676013648509979,
+            0.0455813854932785
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 1,
+            "displacement_mm": 9.3,
+            "force_lbf": 1.766,
+            "force_N": 7.86
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T13:59:38.863024",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 78,
+      "batch": 19,
+      "batch_pair": 2,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7726193070411682,
+            -0.03792406618595123,
+            0.04529297724366188
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7731902003288269,
+            -0.03738943114876747,
+            0.04583960026502609
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 2,
+            "displacement_mm": 18.6,
+            "force_lbf": 2.352,
+            "force_N": 10.46
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T14:16:14.917774",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    },
+    {
+      "pair": 79,
+      "batch": 19,
+      "batch_pair": 3,
+      "hold_id": 3,
+      "hold_name": "pinch",
+      "grasp_type": "pinch",
+      "grasp_type_id": 2,
+      "orientation_deg": 45.0,
+      "order": [
+        "WITH_TAXONOMY",
+        "WITHOUT_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7730712294578552,
+            -0.036371566355228424,
+            0.045892562717199326
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 4,
+            "displacement_mm": 37.2,
+            "force_lbf": 3.523,
+            "force_N": 15.67
+          }
+        },
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7734577655792236,
+            -0.036304377019405365,
+            0.045957621186971664
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T14:19:36.355940",
+      "pull_dist_m": 0.13,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 2000.0
+      }
+    }
+  ],
+  "last_saved": "2026-05-15T14:19:36.630868"
+}

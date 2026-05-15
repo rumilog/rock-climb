@@ -97,8 +97,8 @@ RESET_HAND_ALLEGRO = np.array(
 HOLD_NAMES = {0: "edge_A", 1: "edge_B", 2: "sloper", 3: "pinch", 4: "test_edge"}
 
 DEFAULT_RESULTS_DIR = TELE_ROOT / "eval_results"
-DEFAULT_WITH_CKPT   = TELE_ROOT / "checkpoints" / "pc_with_taxonomy" / "best.pt"
-DEFAULT_NO_CKPT     = TELE_ROOT / "checkpoints" / "pc_no_taxonomy"  / "best.pt"
+DEFAULT_WITH_CKPT   = TELE_ROOT / "checkpoints" / "pc_with_taxonomy_rig" / "best.pt"
+DEFAULT_NO_CKPT     = TELE_ROOT / "checkpoints" / "pc_no_taxonomy_rig"   / "best.pt"
 
 MODEL_WITH = "WITH_TAXONOMY"
 MODEL_NO   = "WITHOUT_TAXONOMY"
@@ -206,7 +206,7 @@ class PairedEvaluator:
                  dry_run=False, results_dir=DEFAULT_RESULTS_DIR,
                  num_inference_steps=10,
                  pull_dist=None, pull_stiffness=4000.0,
-                 pull_lateral_stiffness=100.0, pull_z_stiffness=100.0,
+                 pull_lateral_stiffness=100.0, pull_z_stiffness=2000.0,
                  pull_z_bias=0.0):
 
         # Batch state — set at start of each batch via _set_batch()
@@ -1143,18 +1143,23 @@ class PairedEvaluator:
             return None
         out_path = self.results_dir / f"paired_session_{self._session_id}.json"
         payload = {
-            "session_id":       self._session_id,
-            "mode":             self._mode,
-            "with_ckpt":        self._with_ckpt_path,
-            "no_ckpt":          self._no_ckpt_path,
-            "max_steps":        self.max_steps,
-            "action_horizon":   self.action_horizon,
-            "inference_steps":  self.num_inf_steps,
-            "first_model":      self._first_model,
-            "planned_batches":  list(self._planned_batches),
-            "batches":          self._batch_configs,
-            "pairs":            self._all_pairs,
-            "last_saved":       datetime.now().isoformat(),
+            "session_id":           self._session_id,
+            "mode":                 self._mode,
+            "with_ckpt":            self._with_ckpt_path,
+            "no_ckpt":              self._no_ckpt_path,
+            "max_steps":            self.max_steps,
+            "action_horizon":       self.action_horizon,
+            "inference_steps":      self.num_inf_steps,
+            "pull_dist_m":          self.pull_dist,
+            "pull_stiffness":       self.pull_stiffness,
+            "pull_lateral_stiffness": self.pull_lateral_stiffness,
+            "pull_z_stiffness":     self.pull_z_stiffness,
+            "pull_z_bias":          self.pull_z_bias,
+            "first_model":          self._first_model,
+            "planned_batches":      list(self._planned_batches),
+            "batches":              self._batch_configs,
+            "pairs":                self._all_pairs,
+            "last_saved":           datetime.now().isoformat(),
         }
         try:
             with open(out_path, "w") as f:
@@ -1250,11 +1255,84 @@ class PairedEvaluator:
             else:
                 print("  <- not significant")
 
-    def _print_analysis(self, pair_results, saved_path):
-        # Overall
-        self._print_subset_analysis("OVERALL (all grasp types)", pair_results)
+    def _print_ratchet_summary(self, pair_results):
+        """Print force-based summary using ratchet data (primary metric)."""
+        # Collect per-grasp ratchet readings
+        grasp_order = ["crimp", "jug", "sloper", "pinch"]
+        by_g = {g: {"w": [], "n": []} for g in grasp_order}
+        all_w, all_n = [], []
+        for r in pair_results:
+            g = r.get("grasp_type")
+            if g not in by_g:
+                continue
+            wr = r["pc_stats"].get("WITH_TAXONOMY",    {}).get("ratchet")
+            nr = r["pc_stats"].get("WITHOUT_TAXONOMY", {}).get("ratchet")
+            if wr is None or nr is None:
+                continue
+            by_g[g]["w"].append(wr["force_N"])
+            by_g[g]["n"].append(nr["force_N"])
+            all_w.append(wr["force_N"])
+            all_n.append(nr["force_N"])
 
-        # Per grasp type
+        if not all_w:
+            print("\n  (No ratchet data recorded — skipping force summary)")
+            return
+
+        import statistics
+        def _wilcoxon(a, b):
+            try:
+                from scipy import stats as sp
+                diffs = [x - y for x, y in zip(a, b)]
+                if len(diffs) < 2 or all(d == 0 for d in diffs):
+                    return 1.0
+                _, p = sp.wilcoxon(a, b, alternative="two-sided")
+                return float(p)
+            except Exception:
+                return float("nan")
+
+        def _sl(p):
+            if p < 0.001: return "***"
+            if p < 0.01:  return "**"
+            if p < 0.05:  return "*"
+            return "ns"
+
+        print(f"\n{'='*62}")
+        print(f"  RATCHET FORCE SUMMARY  (primary metric — binary ratings ignored)")
+        print(f"{'='*62}")
+        print(f"  {'Grasp':10s} {'n':>4s}  {'WITH med':>9s}  {'W/O med':>8s}  {'Δmed':>7s}  {'p':>8s}  sig")
+        print(f"  {'─'*56}")
+
+        for g in grasp_order:
+            wf = by_g[g]["w"]
+            nf = by_g[g]["n"]
+            if not wf:
+                continue
+            pv   = _wilcoxon(wf, nf)
+            dmed = statistics.median(wf) - statistics.median(nf)
+            print(f"  {g:10s} {len(wf):>4d}  "
+                  f"{statistics.median(wf):>7.1f} N  "
+                  f"{statistics.median(nf):>6.1f} N  "
+                  f"{dmed:>+5.1f} N  "
+                  f"{pv:>8.4f}  {_sl(pv)}")
+
+        print(f"  {'─'*56}")
+        pv   = _wilcoxon(all_w, all_n)
+        dmed = statistics.median(all_w) - statistics.median(all_n)
+        print(f"  {'OVERALL':10s} {len(all_w):>4d}  "
+              f"{statistics.median(all_w):>7.1f} N  "
+              f"{statistics.median(all_n):>6.1f} N  "
+              f"{dmed:>+5.1f} N  "
+              f"{pv:>8.4f}  {_sl(pv)}")
+        print(f"\n  Ref: 0t=5.2N  3t=13.1N  5t=18.3N  7t=23.5N  9t=28.7N  11t=33.9N")
+        print(f"  Run eval_results/generate_ratchet_figures.py for full figure set.")
+        print(f"{'='*62}\n")
+
+    def _print_analysis(self, pair_results, saved_path):
+        # Ratchet force summary first (primary metric)
+        self._print_ratchet_summary(pair_results)
+
+        # Binary rating analysis (kept for completeness; meaningless if all rated 'good')
+        self._print_subset_analysis("OVERALL (all grasp types)", pair_results)
         by_grasp = {}
         for r in pair_results:
             by_grasp.setdefault(r["grasp_type"], []).append(r)
@@ -1344,7 +1422,8 @@ def main():
     parser.add_argument("--pull-dist", type=float, default=None,
                         help="If set, execute a spring-testbed pull test after each rollout: "
                              "arm moves this many meters toward robot base (180°, -X, hardcoded). "
-                             "Standard value: 0.105 (10.5 cm, 11 ratchet teeth). "
+                             "Standard value: 0.130 (13 cm). Ratchet range is 0–102.3 mm (11 teeth); "
+                             "strong grips that travel past 102.3 mm read 11 teeth (≥33.9 N). "
                              "After each pull, enter the ratchet tooth count (0–11); "
                              "the script computes and logs displacement + slip force.")
     parser.add_argument("--pull-stiffness", type=float, default=4000.0,
@@ -1354,9 +1433,11 @@ def main():
     parser.add_argument("--pull-lateral-stiffness", type=float, default=100.0,
                         help="Y-axis (lateral) Cartesian impedance stiffness in N/m. "
                              "Default 100 — compliant, allows natural side-to-side hand flex.")
-    parser.add_argument("--pull-z-stiffness", type=float, default=100.0,
+    parser.add_argument("--pull-z-stiffness", type=float, default=2000.0,
                         help="Z-axis (vertical) Cartesian impedance stiffness in N/m. "
-                             "Default 100 — compliant, allows natural up/down hand flex.")
+                             "Default 2000. Must be high enough to hold the LEAP hand (~1 kg, "
+                             "~10 N gravity load) against gravity without sagging; at 100 N/m "
+                             "the arm droops ~10 cm. 2000 N/m → ~5 mm static droop, negligible.")
     parser.add_argument("--pull-z-bias", type=float, default=0.0,
                         help="Upward Z offset (meters) added to pull target pose. "
                              "Compensates for LEAP hand weight not in Franka gravity model. "
@@ -1433,7 +1514,8 @@ def main():
                 run_mode = "interactive"
 
     def _cleanup(signum=None, frame=None):
-        print("\n  Interrupt — cleaning up ...")
+        # Called from SIGINT, QuitRequested, exception, AND normal completion.
+        print("\n  Cleaning up hardware (save first, then teardown) ...")
 
         # 1) SAVE FIRST, in the main thread, before touching any hardware.
         #    Hardware teardown (pyrealsense / FrankaArm threads) often
@@ -1488,8 +1570,10 @@ def main():
     except QuitRequested:
         print("\n  Quit requested — saving and shutting down cleanly.")
         print(f"  {len(evaluator._all_pairs)} pair(s) saved this session.")
+        pull_flag = (f" --pull-dist {evaluator.pull_dist}"
+                     if evaluator.pull_dist is not None else "")
         print(f"  To resume later:\n"
-              f"    python3 paired_eval.py --resume "
+              f"    python3 paired_eval.py{pull_flag} --resume "
               f"{evaluator.results_dir}/paired_session_{evaluator._session_id}.json")
         _cleanup()
     except KeyboardInterrupt:
@@ -1502,6 +1586,12 @@ def main():
             evaluator._save_only()
         except Exception:
             pass
+        _cleanup()
+    else:
+        # Normal completion: still need to tear down pyrealsense / FrankaArm threads
+        # cleanly, otherwise the C++ destructors throw "terminate called without an
+        # active exception" and the process hangs. _cleanup() calls os._exit(0).
+        print("\n  Session complete.")
         _cleanup()
 
 

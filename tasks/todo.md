@@ -1,6 +1,6 @@
 # TODO
 
-## Current State (2026-05-11)
+## Current State (2026-05-15) — PRIMARY EVALUATION COMPLETE
 
 - ✅ Point cloud pipeline implemented end-to-end
 - ✅ `--no-grasp-conditioning` flag implemented in train.py (ablation-ready)
@@ -9,9 +9,20 @@
 - ✅ Verified training fits on local RTX 2080 Ti (0.8 GB VRAM, ~11 hours for 3000 epochs)
 - ✅ Spring displacement testbed built (linear single-axis pull toward robot base, ratcheting peak-displacement readout)
 - ✅ Workspace bounds re-calibrated for spring testbed: `z_min=0.027`, `z_max=0.40` in `point_cloud_utils.py` (was `z_min=0.006`, `z_max=0.30` on the bare table)
-- ✅ Cartesian impedance pull flags available in `evaluate.py` / `paired_eval.py` as an optional safety knob (`--pull-stiffness`, `--pull-z-stiffness`, `--pull-z-bias`); not used by default — position control is the standard for the spring testbed
-- ⚠️ Both prior checkpoints (`pc_with_taxonomy/best.pt`, `pc_no_taxonomy/best.pt`) are **superseded** — trained on the flat-table 200-ep dataset which doesn't match the rig distribution
-- ⚠️ The 200-episode flat-table dataset is **invalid** for the new protocol (kept on disk for RGB ablation only)
+- ✅ Impedance pull: kx=4000 / ky=100 / kz=2000 N/m (Z stiffened to hold LEAP hand weight)
+- ✅ Both rig-trained checkpoints ready: `pc_with_taxonomy_rig/best.pt`, `pc_no_taxonomy_rig/best.pt`
+- ✅ **PRIMARY PAIRED EVALUATION COMPLETE** (2026-05-15)
+  - 80 pairs: 4 pairs × 5 orientations × 4 hold types
+  - Session: `eval_results/paired_session_20260515_074256.json`
+  - Primary metric: ratchet slip force (N) — spring testbed, 13 cm pull
+  - Results (Wilcoxon signed-rank, paired):
+    - Crimp:  WITH 15.7 N  vs WITHOUT 9.2 N  | Δ+6.5 N | p=0.0007 | d=1.05 ***
+    - Jug:    WITH 15.7 N  vs WITHOUT 14.4 N | Δ+1.3 N | p=0.0278 | d=0.55 *
+    - Sloper: WITH  7.9 N  vs WITHOUT 5.2 N  | Δ+2.6 N | p=0.0012 | d=1.08 **
+    - Pinch:  WITH 15.7 N  vs WITHOUT 9.2 N  | Δ+6.5 N | p<0.001  | d=1.82 ***
+    - OVERALL: WITH 13.1 N vs WITHOUT 7.9 N  | Δ+5.2 N | p<0.001  | d=0.95 ***
+  - Ratchet figures: `eval_results/figures/fig_ratchet_1–4.png`
+- ⚠️ Legacy checkpoints (`pc_with_taxonomy/`, `pc_no_taxonomy/`) superseded — pre-rig data
 
 **Plan reframe (2026-05-11):** training and evaluation both happen on the spring
 testbed. Training = teleoperate the LEAP hand + Franka to grip the hold (no pull
@@ -29,50 +40,46 @@ each pair — not by storing it in the training zarr.
 
 ---
 
-## Immediate Next Steps
+## Immediate Next Steps (paper completion)
 
-1. **Sanity-check the PC pipeline on the rig** — with a hold mounted at 0°, run
-   `check_pc_sensitivity.py` and confirm: centroid Z above the rig deck, full
-   hold geometry captured, centroids shift cm-scale across the 5 orientations.
+### 1. Wrong-label ablation (highest priority)
+Run ~10 pairs per mislabeled condition to prove conditioning causally controls behavior.
+Give each model the WRONG grasp type label while evaluating the correct physical hold.
+```bash
+# Example: jug hold (hold 0) but tell both models it's a crimp
+python3 paired_eval.py --pull-dist 0.130 --batches jug:0:10:0
+# Then at the batch start, override the grasp_type label manually in the JSON, OR
+# edit paired_eval.py to pass a wrong grasp_type_id to the models
+```
+Hypothesis: WITH-taxonomy model executes wrong grip shape → low ratchet force.
+WITHOUT-taxonomy model ignores label → same force as correct-label condition.
+This proves the conditioning signal is causal, not a noise term.
 
-2. **Recollect training data** — 10 episodes × 5 orientations = 50 episodes per hold.
-   Collect all 10 reps at one orientation before rotating to the next.
+### 2. Held-out hold generalization
+Get a new physical crimp hold never seen in training. Evaluate taxonomy-conditioned
+model only with `grasp_type=crimp`. No demos needed — eval only.
+```bash
+python3 evaluate.py --checkpoint ../checkpoints/pc_with_taxonomy_rig/best.pt \
+    --hold 4 --grasp-type crimp --pull-dist 0.130 --trials 20
+```
+Tests whether model learned a general crimp strategy vs memorized edge_B geometry.
 
-   **`--task climbing_holds_rig` is MANDATORY** — the default `--task climbing_holds`
-   points at the legacy flat-table 200-ep zarr and would silently append rig data
-   onto it (zarr is opened `mode="a"`). Use the same `--task` name across every
-   session for this dataset so all 4 hold/grasp combos accumulate into one zarr.
+### 3. Regenerate latent/action/novelty figures from rig checkpoints
+The existing figures in `eval_results/figures/` were made from the pre-rig checkpoints.
+Update the checkpoint paths in each script and rerun:
+```bash
+cd ~/Desktop/tele/data_collection
+# edit generate_latent_viz.py / generate_action_dist_viz.py / generate_novelty_viz.py
+# to point at checkpoints/pc_with_taxonomy_rig/best.pt + checkpoints/pc_no_taxonomy_rig/best.pt
+python3 ../eval_results/generate_latent_viz.py
+python3 ../eval_results/generate_action_dist_viz.py
+python3 ../eval_results/generate_novelty_viz.py
+```
 
-   ```bash
-   # Jug (hold 0, edge_A gripped as jug):
-   python3 collect_data.py --hold 0 --point-cloud --grasp-type jug --task climbing_holds_rig
-   # Crimp (hold 1, edge_B):
-   python3 collect_data.py --hold 1 --point-cloud --grasp-type crimp --task climbing_holds_rig
-   # Sloper (hold 2):
-   python3 collect_data.py --hold 2 --point-cloud --grasp-type sloper --task climbing_holds_rig
-   # Pinch (hold 3):
-   python3 collect_data.py --hold 3 --point-cloud --grasp-type pinch --task climbing_holds_rig
-   # rotate the hold on the rig between blocks of 10 episodes within each session
-   ```
-
-4. **Retrain both models** — with and without taxonomy conditioning on the new
-   rig-collected dataset. Same hyperparams; check the audit table below for any
-   that need to scale with the (likely larger) dataset size.
-
-5. **Run paired evaluation with spring testbed** — `--pull-angle 180` fixed,
-   position control; ≥4 pairs per orientation per grasp type = 20 pairs/type,
-   100 pairs total. Randomize the hold orientation per trial (or step through
-   the 5 angles systematically) and log it per pair. After each trial, read
-   the ratchet displacement (mm) by eye and log it alongside the binary success
-   rating; compute slip force offline via `F = k · x`.
-   ```bash
-   # Full session (4 pairs × 5 orientations per hold, 80 pairs total):
-   python3 paired_eval.py --pull-dist 0.105 --batches \
-     jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
-     crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
-     sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
-     pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
-   ```
+### 4. Training curves
+Plot loss vs epoch from the training logs:
+- `checkpoints/pc_with_taxonomy_rig_train.log`
+- `checkpoints/pc_no_taxonomy_rig/train.log`
 
 5. **Wrong-label ablation** — after main eval is done
    - Run paired_eval with deliberately incorrect taxonomy labels
@@ -205,7 +212,7 @@ For EVERY evaluation trial, record:
 
 **How to run with pull test:**
 ```bash
-python3 paired_eval.py --pull-dist 0.105
+python3 paired_eval.py --pull-dist 0.130
 ```
 Pull angle is hardcoded at 180° (toward robot base, -X). After each pull, enter the ratchet tooth count (0–11) when prompted; the script computes and logs displacement + force. See CLAUDE.md "Spring testbed protocol" for the force table.
 

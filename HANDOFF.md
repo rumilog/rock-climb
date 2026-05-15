@@ -243,7 +243,7 @@ DDPM 1D U-Net → action chunk (16 × 23-dim)
 - PC trial flow: arm out → SPACE → capture PC → arm back → SPACE → start policy
 - `--grasp-type` arg required for PC checkpoints (or interactive prompt)
 - **Inference speed:** default `--inference-steps 100` (full DDPM). For PC mode use `--inference-steps 10` (DDIM, per RESEARCH_PLAN recommendation) for faster 10 Hz execution
-- **Pull test** (`--pull-dist`): after the rollout ends, arm pulls 10.5 cm toward the robot base (180° = −X, hardcoded). Uses impedance control with differential stiffness: kx=4000 N/m (pull axis), ky=100 N/m (lateral), kz=100 N/m (vertical). After the pull, the operator enters the ratchet tooth count (0–11); the script computes displacement (teeth × 9.3 mm) and slip force from the two-spring formula `F = (1.18 + 1.6 × x_in) × 4.448 N`, then logs `ratchet.{teeth, displacement_mm, force_lbf, force_N}` to the result JSON. `--pull-angle` accepts a custom angle for non-testbed use (defaults to 180°). Stiffness overrideable via `--pull-stiffness` (kx), `--pull-lateral-stiffness` (ky), `--pull-z-stiffness` (kz), `--pull-z-bias`.
+- **Pull test** (`--pull-dist`): after the rollout ends, arm pulls 10.5 cm toward the robot base (180° = −X, hardcoded). Uses impedance control with differential stiffness: kx=4000 N/m (pull axis), ky=100 N/m (lateral), kz=2000 N/m (vertical — must hold ~10 N of LEAP hand weight without sagging). After the pull, the operator enters the ratchet tooth count (0–11); the script computes displacement (teeth × 9.3 mm) and slip force from the two-spring formula `F = (1.18 + 1.6 × x_in) × 4.448 N`, then logs `ratchet.{teeth, displacement_mm, force_lbf, force_N}` to the result JSON. `--pull-angle` accepts a custom angle for non-testbed use (defaults to 180°). Stiffness overrideable via `--pull-stiffness` (kx), `--pull-lateral-stiffness` (ky), `--pull-z-stiffness` (kz), `--pull-z-bias`.
 
 ### `paired_eval.py` (canonical tool for WITH-vs-WITHOUT-taxonomy comparison)
 
@@ -262,9 +262,9 @@ Key design choices:
 
 Saved JSON fields: `session_id`, `mode`, `first_model`, `planned_batches`, `batches` (each with `completed_pairs`), `pairs` (each with `grasp_type`, `hold_id`, `order`, `with_rating`, `no_rating`, `pc_stats` (including `pull_angle_deg` per trial if pull test was used), `pull_dist_m`, `timestamp`), `last_saved`.
 
-**Pull test** (`--pull-dist`): same mechanics as evaluate.py — 10.5 cm pull at 180° (hardcoded, no `--pull-angle` flag in paired_eval), impedance kx=4000/ky=100/kz=100 N/m, ratchet prompt after each trial, per-trial `ratchet` dict logged in `pc_stats[model_label]`.
+**Pull test** (`--pull-dist`): same mechanics as evaluate.py — 10.5 cm pull at 180° (hardcoded, no `--pull-angle` flag in paired_eval), impedance kx=4000/ky=100/kz=2000 N/m, ratchet prompt after each trial, per-trial `ratchet` dict logged in `pc_stats[model_label]`.
 
-Default checkpoints: `checkpoints/pc_with_taxonomy/best.pt` and `checkpoints/pc_no_taxonomy/best.pt`. Override with `--with-ckpt` / `--no-ckpt`.
+Default checkpoints (updated 2026-05-15 to the rig-trained pair): `checkpoints/pc_with_taxonomy_rig/best.pt` and `checkpoints/pc_no_taxonomy_rig/best.pt`. Override with `--with-ckpt` / `--no-ckpt`. The old non-`_rig` checkpoints are superseded — do not use them for paired eval.
 
 ---
 
@@ -311,7 +311,7 @@ python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
 
 # With spring testbed pull test (10.5 cm pull, 180° hardcoded, ratchet prompt after each trial):
 python3 evaluate.py --checkpoint ../checkpoints/pc_v1/best.pt \
-    --hold 0 --grasp-type crimp --pull-dist 0.105
+    --hold 0 --grasp-type crimp --pull-dist 0.130
 ```
 
 ### Paired Evaluation (WITH vs WITHOUT taxonomy — the main comparison experiment)
@@ -324,12 +324,14 @@ python3 paired_eval.py
 # Or scripted, for a planned full session (20 pairs per hold = 80 total pairs, ~160 rollouts):
 python3 paired_eval.py --batches crimp:1:20,jug:0:20,sloper:2:20,pinch:3:20
 
-# Full session — 4 pairs × 5 orientations per hold, batches include orientation_deg:
-python3 paired_eval.py --pull-dist 0.105 --batches \
-  jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
-  crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
-  sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
-  pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45
+# Full session — 4 pairs × 5 orientations per hold, batches include orientation_deg.
+# --batches value must be quoted and continuation lines must start at column 0
+# (no leading whitespace), otherwise bash splits the comma-list into separate argv tokens.
+python3 paired_eval.py --pull-dist 0.130 --batches "\
+jug:0:4:-45,jug:0:4:-22.5,jug:0:4:0,jug:0:4:22.5,jug:0:4:45,\
+crimp:1:4:-45,crimp:1:4:-22.5,crimp:1:4:0,crimp:1:4:22.5,crimp:1:4:45,\
+sloper:2:4:-45,sloper:2:4:-22.5,sloper:2:4:0,sloper:2:4:22.5,sloper:2:4:45,\
+pinch:3:4:-45,pinch:3:4:-22.5,pinch:3:4:0,pinch:3:4:22.5,pinch:3:4:45"
 ```
 
 During the run, type `q` + Enter at any "Press Enter ..." prompt to save and
@@ -374,7 +376,10 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
   reference / RGB-baseline ablation but will be replaced by a fresh collection
   at z_min=0.027 with hold orientation logged per episode.
 
-**Next training run:** recollect 50 jug episodes → retrain PC model → verify robot uses PC (zero-PC vs real-PC actions must differ).
+**Rig-era checkpoints (CURRENT — use these for all evaluation and figure generation):**
+- `checkpoints/pc_with_taxonomy_rig/best.pt` — epoch 2939, trained on spring-testbed dataset, `use_grasp_conditioning=True`
+- `checkpoints/pc_no_taxonomy_rig/best.pt` — epoch 2859, same dataset, `use_grasp_conditioning=False` (from HF: `rlogh/climbing-holds-rig-no-taxonomy`)
+- Training dataset: `/mnt/ssd/rumi_tele_datasets/climbing_holds_rig.zarr`
 
 ---
 
@@ -392,12 +397,70 @@ python3 evaluate.py --checkpoint ../checkpoints/overnight_224/best.pt --hold 0
 
 ---
 
-## 10. Current Goals (Priority Order)
+## 10. Evaluation Results (2026-05-15) — PRIMARY EVALUATION COMPLETE
 
-1. **Run pilot training on cluster** — 50 jug episodes on hold 0 are ready (see README for commands)
-2. **Evaluate pilot on robot** — load checkpoint, run evaluate.py, confirm PC inference works end-to-end
-3. **Collect data for holds 1–3** — crimp, sloper, pinch (50 good episodes each)
-4. **Scale training** — full dataset across all hold types
-5. **Run ablations** — with/without grasp type conditioning; PC vs RGB baseline; 1024 vs other point counts
+**Session file:** `eval_results/paired_session_20260515_074256.json`  
+**80 pairs total** — 4 pairs × 5 orientations × 4 hold types. All 80 have ratchet data.
 
-**Research target:** RESEARCH_PLAN.md describes the full research design, related work citations, and experimental setup.
+| Grasp  | WITH med | W/O med | Δ     | p       | d    | sig |
+|--------|----------|---------|-------|---------|------|-----|
+| Crimp  | 15.7 N   | 9.2 N   | +6.5N | 0.0007  | 1.05 | *** |
+| Jug    | 15.7 N   | 14.4 N  | +1.3N | 0.0278  | 0.55 | *   |
+| Sloper | 7.9 N    | 5.2 N   | +2.6N | 0.0012  | 1.08 | **  |
+| Pinch  | 15.7 N   | 9.2 N   | +6.5N | <0.001  | 1.82 | *** |
+| OVERALL| 13.1 N   | 7.9 N   | +5.2N | <0.001  | 0.95 | *** |
+
+Wilcoxon signed-rank test (paired, two-sided). Ratchet force = 2-spring-parallel slip force.
+
+---
+
+## 11. Analysis Reproduction (run from ~/Desktop/tele/)
+
+### Primary figures (ratchet force — use these for the paper)
+```bash
+source ~/franka/bin/activate
+python3 eval_results/generate_ratchet_figures.py \
+    --session eval_results/paired_session_20260515_074256.json
+# → eval_results/figures/fig_ratchet_1_boxplots.png     (main result figure)
+# → eval_results/figures/fig_ratchet_2_scatter.png       (per-pair scatter)
+# → eval_results/figures/fig_ratchet_3_by_orientation.png (orientation effect)
+# → eval_results/figures/fig_ratchet_4_per_pair_delta.png (signed per-pair delta)
+```
+
+### Latent / action-distribution / novelty figures
+These scripts load the checkpoints directly. Update checkpoint paths inside each script
+to point at `pc_with_taxonomy_rig` and `pc_no_taxonomy_rig`, then run:
+```bash
+cd ~/Desktop/tele/data_collection
+python3 ../eval_results/generate_latent_viz.py
+python3 ../eval_results/generate_action_dist_viz.py
+python3 ../eval_results/generate_novelty_viz.py
+```
+Existing figures in `eval_results/figures/` were generated from the pre-rig checkpoints
+(`pc_with_taxonomy`, `pc_no_taxonomy`). Regenerate for the final paper.
+
+### Training curves
+Training logs are at:
+- `checkpoints/pc_with_taxonomy_rig_train.log`
+- `checkpoints/pc_no_taxonomy_rig/train.log`
+Parse with grep/pandas and plot loss vs epoch.
+
+### Z-centroid figure (still valid — uses eval session, not checkpoints)
+```bash
+python3 eval_results/generate_figures.py \
+    --session eval_results/paired_session_20260515_074256.json
+# Only fig3_z_centroid.png is meaningful — the binary figures (fig1,2,4,5)
+# are useless because all trials were rated 'good'.
+```
+
+---
+
+## 12. Current Goals (for paper completion)
+
+1. **Wrong-label ablation** — see tasks/todo.md §1. Highest-priority remaining experiment.
+2. **Held-out hold generalization** — see tasks/todo.md §2. New physical crimp hold, eval only.
+3. **Regenerate latent/novelty figures** from rig checkpoints — see §11 above.
+4. **Write up results** — use ratchet force table + fig_ratchet_1_boxplots.png as primary.
+
+**Full research design:** RESEARCH_PLAN.md  
+**Experiment results:** PROGRESS_UPDATE.md

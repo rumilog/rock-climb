@@ -194,3 +194,8 @@ climbing_holds.zarr/
 ```
 
 Note: images are NOT included in this dataset — the policy uses point clouds only.
+
+
+cameras 2 and 3, 5 and 4: 24.5 inches apart
+cameras 4 and 3, 5 and 2: 35.75 inch
+had to redo 5 times due to random errors popping up in code
