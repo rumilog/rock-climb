@@ -1,0 +1,89 @@
+{
+  "session_id": "20260515_072522",
+  "mode": "scripted",
+  "with_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_with_taxonomy_rig/best.pt",
+  "no_ckpt": "/home/rumi/Desktop/tele/checkpoints/pc_no_taxonomy_rig/best.pt",
+  "max_steps": 200,
+  "action_horizon": 8,
+  "inference_steps": 10,
+  "first_model": "WITHOUT_TAXONOMY",
+  "planned_batches": [
+    [
+      "jug",
+      0,
+      1,
+      0.0
+    ]
+  ],
+  "batches": [
+    {
+      "batch": 0,
+      "grasp_type": "jug",
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "n_pairs": 1,
+      "orientation_deg": 0.0,
+      "completed_pairs": 1
+    }
+  ],
+  "pairs": [
+    {
+      "pair": 0,
+      "batch": 0,
+      "batch_pair": 0,
+      "hold_id": 0,
+      "hold_name": "edge_A",
+      "grasp_type": "jug",
+      "grasp_type_id": 3,
+      "orientation_deg": 0.0,
+      "order": [
+        "WITHOUT_TAXONOMY",
+        "WITH_TAXONOMY"
+      ],
+      "with_rating": "good",
+      "no_rating": "good",
+      "pc_stats": {
+        "WITHOUT_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7675775289535522,
+            -0.03306204080581665,
+            0.04798225685954094
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 0,
+            "displacement_mm": 0.0,
+            "force_lbf": 1.18,
+            "force_N": 5.25
+          }
+        },
+        "WITH_TAXONOMY": {
+          "n_valid": 1024,
+          "centroid": [
+            0.7677132487297058,
+            -0.03274141252040863,
+            0.047881823033094406
+          ],
+          "pull_angle_deg": 180.0,
+          "ratchet": {
+            "teeth": 6,
+            "displacement_mm": 55.8,
+            "force_lbf": 4.695,
+            "force_N": 20.88
+          }
+        }
+      },
+      "aborted": false,
+      "timestamp": "2026-05-15T07:28:59.197193",
+      "pull_dist_m": 0.105,
+      "pull_angle_deg": 180.0,
+      "pull_stiffness": {
+        "kx": 4000.0,
+        "ky": 100.0,
+        "kz": 100.0
+      }
+    }
+  ],
+  "last_saved": "2026-05-15T07:28:59.225307"
+}
