@@ -14,6 +14,8 @@
 | `tasks/lessons.md` | Mistakes made + rules to prevent recurrence. | Every session |
 | `HANDOFF.md` | Full technical reference: hardware, file layout, state/action space, data flow, known quirks. The most complete single doc. | When doing anything non-trivial |
 | `RESEARCH_PLAN.md` | Full research design: problem statement, related work citations, two-part architecture (VLM identifier + diffusion policy), experimental setup, training config, ablations, timeline. | When making architecture or research decisions |
+| `PAPER_METHODOLOGY.md` | Paper-ready methodology reference: exact compute specs, robot hardware versions, dataset stats, training-time numbers, statistical methods, reproducibility checklist, limitations. **Use directly when writing the Methods section.** | When writing the paper |
+| `OBSERVATIONS.md` | Pre-written observation paragraphs with numbers/tables already filled in (failure-mode breakdown, win counts, orientation effects, order-check, quote-ready sentences). **Use directly when writing Results and Discussion.** | When writing the paper |
 | `IMPLEMENTATION_LOG.md` | Chronological changelog of every code change made, with session-by-session summaries. | When debugging or resuming code work |
 | `PROGRESS_UPDATE.md` | Slide-ready status summary: what's been built, data collection numbers, next steps. | When presenting to professor or writing slides |
 | `README.md` | Instructions for the training cluster: clone repo, install deps, download HF dataset, run training. | When setting up the cluster machine |

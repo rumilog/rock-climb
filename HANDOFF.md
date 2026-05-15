@@ -453,6 +453,30 @@ python3 eval_results/generate_figures.py \
 # are useless because all trials were rated 'good'.
 ```
 
+### Observation analysis (failure modes, variance, order check, orientation dive)
+```bash
+python3 eval_results/analyze_observations.py
+# → fig_obs_1_failure_modes.png       (stacked bar by grasp type)
+# → fig_obs_2_variance.png            (IQR comparison)
+# → fig_obs_3_order_check.png         (alternation validation)
+# → fig_obs_4_orientation_dive.png    (per-orientation breakdown)
+# + terminal report with all numbers (paste into OBSERVATIONS.md)
+```
+
+### Training curves
+```bash
+python3 eval_results/generate_training_curves.py
+# → fig_training_curves.png — loss vs epoch, both models (linear + log panels)
+# Reads from checkpoints/pc_with_taxonomy_rig_train.log and pc_no_taxonomy_rig/train.log
+```
+
+### Display results (terminal + publication table figure)
+```bash
+python3 eval_results/display_results.py
+# Prints colored terminal table with all key statistics
+# → fig_results_table.png — publication-quality table (with effect-size bar chart)
+```
+
 ---
 
 ## 12. Current Goals (for paper completion)
