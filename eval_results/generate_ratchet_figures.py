@@ -430,6 +430,234 @@ def print_force_summary(by_grasp, pairs):
     print("=" * 72)
 
 
+# ── Figure 5: CDF of slip forces ─────────────────────────────────────────────
+
+def fig5_force_cdf(by_grasp, pairs, out_path):
+    """Empirical CDF of slip force, per grasp type + overall panel."""
+    fig, axes = plt.subplots(1, 5, figsize=(16, 4.2), sharey=True)
+
+    def _ecdf(vals):
+        s = np.sort(vals)
+        y = np.arange(1, len(s) + 1) / len(s)
+        # prepend 0 at x=0 so CDF starts from the origin
+        return np.concatenate([[0], s]), np.concatenate([[0], y])
+
+    panels = [(g, by_grasp[g]) for g in GRASP_ORDER] + [("overall", None)]
+
+    for ax, (label, gp) in zip(axes, panels):
+        if label == "overall":
+            wf = [p["with_force_N"] for p in pairs]
+            nf = [p["no_force_N"]   for p in pairs]
+            title = "OVERALL"
+            lw = 2.4
+        else:
+            wf = [p["with_force_N"] for p in gp] if gp else []
+            nf = [p["no_force_N"]   for p in gp] if gp else []
+            title = label.capitalize()
+            lw = 1.9
+
+        if wf:
+            xw, yw = _ecdf(wf)
+            xn, yn = _ecdf(nf)
+            ax.step(xw, yw, color=WITH_COLOR,    linewidth=lw, where="post",
+                    label="With taxonomy")
+            ax.step(xn, yn, color=WITHOUT_COLOR,  linewidth=lw, where="post",
+                    label="Without taxonomy")
+
+            # median lines
+            ax.axvline(np.median(wf), color=WITH_COLOR,    linestyle=":", alpha=0.7)
+            ax.axvline(np.median(nf), color=WITHOUT_COLOR,  linestyle=":", alpha=0.7)
+
+            pv = wilcoxon_p(wf, nf)
+            ax.set_title(f"{title}\n(Wilcoxon {sig_label(pv)}, p={pv:.3f})",
+                         fontsize=10)
+
+        ax.set_xlabel("Slip force (N)")
+        ax.set_xlim(0, RATCHET_MAX_N + 2)
+        ax.set_ylim(0, 1.05)
+        ax.xaxis.grid(True, alpha=0.3, linestyle="--")
+        ax.yaxis.grid(True, alpha=0.3, linestyle="--")
+        ax.set_axisbelow(True)
+        if ax == axes[0]:
+            ax.set_ylabel("Cumulative fraction")
+            ax.legend(fontsize=8.5, loc="lower right")
+
+    axes[2].set_xlabel("Slip force (N)")
+    fig.suptitle("Cumulative distribution of slip force — taxonomy conditioning shifts distribution rightward",
+                 fontsize=11, y=1.01)
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved {out_path}")
+
+
+# ── Figure 6: Cohen's d effect size ──────────────────────────────────────────
+
+def _bootstrap_d_ci(a, b, n_boot=2000, seed=42):
+    """Percentile bootstrap 95% CI for Cohen's d of paired differences."""
+    diffs = np.asarray(a) - np.asarray(b)
+    rng   = np.random.default_rng(seed)
+    boot  = []
+    for _ in range(n_boot):
+        s = rng.choice(diffs, size=len(diffs), replace=True)
+        if s.std() > 0:
+            boot.append(s.mean() / s.std())
+    boot = np.sort(boot)
+    return float(np.percentile(boot, 2.5)), float(np.percentile(boot, 97.5))
+
+
+def fig6_effect_sizes(by_grasp, out_path):
+    """Cohen's d per grasp type with bootstrap 95% CI."""
+    fig, ax = plt.subplots(figsize=(7.5, 4.8))
+
+    ds, lo_errs, hi_errs, colors_bar, labels = [], [], [], [], []
+    for g in GRASP_ORDER:
+        gp = by_grasp[g]
+        if not gp:
+            continue
+        wf = [p["with_force_N"] for p in gp]
+        nf = [p["no_force_N"]   for p in gp]
+        d  = cohen_d(wf, nf)
+        lo, hi = _bootstrap_d_ci(wf, nf)
+        ds.append(d)
+        lo_errs.append(d - lo)
+        hi_errs.append(hi - d)
+        colors_bar.append(WITH_COLOR if d > 0 else WITHOUT_COLOR)
+        labels.append(g.capitalize())
+
+    x = np.arange(len(ds))
+    err = np.array([lo_errs, hi_errs])
+    bars = ax.bar(x, ds, color=colors_bar, width=0.5, alpha=0.75, zorder=3)
+    ax.errorbar(x, ds, yerr=err, fmt="none", color="black",
+                capsize=6, capthick=1.5, linewidth=1.5, zorder=4)
+
+    for xi, d in zip(x, ds):
+        ax.text(xi, d + (0.06 if d >= 0 else -0.1), f"d = {d:.2f}",
+                ha="center", va="bottom" if d >= 0 else "top",
+                fontsize=10.5, fontweight="bold")
+
+    # Reference lines
+    for level, label, style in [(0.2, "small", ":"), (0.5, "medium", "--"), (0.8, "large", "-.")]:
+        ax.axhline(level, color="#AAA", linewidth=0.9, linestyle=style,
+                   label=f"|d|={level} ({label})", zorder=0)
+
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Cohen's d  (paired differences)")
+    ax.set_title("Effect size of taxonomy conditioning on grip strength\n"
+                 "(bars = Cohen's d, error bars = bootstrap 95% CI, n=20 pairs each)",
+                 pad=8)
+    ax.legend(loc="upper left", fontsize=8.5, framealpha=0.9)
+    ax.yaxis.grid(True, alpha=0.3, linestyle="--")
+    ax.set_axisbelow(True)
+    ax.set_ylim(0, max(ds) * 1.35)
+    fig.tight_layout()
+    fig.savefig(out_path)
+    plt.close(fig)
+    print(f"Saved {out_path}")
+
+
+# ── Figure 7: 4-panel per-grasp scatter ──────────────────────────────────────
+
+def fig7_per_grasp_scatter(by_grasp, out_path):
+    """4-panel scatter (one per grasp type) WITH vs WITHOUT force per pair."""
+    fig, axes = plt.subplots(1, 4, figsize=(14, 4.2), sharey=True, sharex=True)
+
+    global_lim = max(
+        max((p["with_force_N"] for g in by_grasp.values() for p in g), default=35),
+        max((p["no_force_N"]   for g in by_grasp.values() for p in g), default=35),
+    ) + 2
+
+    for ax, g in zip(axes, GRASP_ORDER):
+        gp = by_grasp[g]
+        wf = [p["with_force_N"] for p in gp]
+        nf = [p["no_force_N"]   for p in gp]
+
+        ax.scatter(nf, wf, c=GRASP_COLORS[g], s=55, alpha=0.75,
+                   zorder=3, edgecolors="white", linewidth=0.5)
+        ax.plot([0, global_lim], [0, global_lim], "k--",
+                linewidth=0.9, alpha=0.4, zorder=2)
+
+        # Regression line
+        if len(nf) > 2:
+            m, b = np.polyfit(nf, wf, 1)
+            xs = np.linspace(0, global_lim, 100)
+            ax.plot(xs, m * xs + b, color=GRASP_COLORS[g],
+                    linewidth=1.5, alpha=0.6, zorder=2)
+
+        pv = wilcoxon_p(wf, nf)
+        d  = cohen_d(wf, nf)
+        ax.set_title(f"{g.capitalize()}\n"
+                     f"d={d:.2f}  {sig_label(pv)} (p={pv:.3f})",
+                     fontsize=10)
+        ax.set_xlim(0, global_lim)
+        ax.set_ylim(0, global_lim)
+        ax.set_xlabel("Without taxonomy (N)")
+        ax.xaxis.grid(True, alpha=0.3, linestyle="--")
+        ax.yaxis.grid(True, alpha=0.3, linestyle="--")
+        ax.set_axisbelow(True)
+
+    axes[0].set_ylabel("With taxonomy (N)")
+    fig.suptitle("Per-grasp-type head-to-head: WITH vs WITHOUT taxonomy grip force\n"
+                 "(each dot = one paired trial · dashed = tie · solid = regression)",
+                 fontsize=11, y=1.02)
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved {out_path}")
+
+
+# ── Figure 8: orientation × grasp heatmap ────────────────────────────────────
+
+def fig8_orientation_heatmap(by_grasp, out_path):
+    """Heatmap: mean slip force for WITH and WITHOUT at each orientation × grasp type."""
+    orients = [-45.0, -22.5, 0.0, 22.5, 45.0]
+    orient_labels = [f"{int(o)}°" if o == int(o) else f"{o}°" for o in orients]
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
+
+    for ax, (key, model_label, cmap) in zip(axes, [
+        ("with_force_N", "With taxonomy",    "Blues"),
+        ("no_force_N",   "Without taxonomy", "Reds"),
+    ]):
+        data = np.full((len(GRASP_ORDER), len(orients)), np.nan)
+        for gi, g in enumerate(GRASP_ORDER):
+            for oi, ori in enumerate(orients):
+                vals = [p[key] for p in by_grasp[g]
+                        if p.get("orientation_deg") == ori]
+                if vals:
+                    data[gi, oi] = np.mean(vals)
+
+        im = ax.imshow(data, cmap=cmap, vmin=0, vmax=RATCHET_MAX_N,
+                       aspect="auto")
+        plt.colorbar(im, ax=ax, label="Mean slip force (N)", shrink=0.85)
+
+        ax.set_xticks(range(len(orients)))
+        ax.set_xticklabels(orient_labels)
+        ax.set_yticks(range(len(GRASP_ORDER)))
+        ax.set_yticklabels([g.capitalize() for g in GRASP_ORDER])
+        ax.set_xlabel("Hold orientation (relative to pull axis)")
+        ax.set_title(model_label, fontsize=11, pad=8)
+
+        # annotate cells
+        for gi in range(len(GRASP_ORDER)):
+            for oi in range(len(orients)):
+                v = data[gi, oi]
+                if not np.isnan(v):
+                    ax.text(oi, gi, f"{v:.0f}", ha="center", va="center",
+                            fontsize=9,
+                            color="white" if v > RATCHET_MAX_N * 0.55 else "black")
+
+    fig.suptitle("Mean slip force (N) by hold orientation × grasp type\n"
+                 "(darker = stronger grip; each cell = mean of 4 paired trials)",
+                 fontsize=11, y=1.02)
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved {out_path}")
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -469,6 +697,10 @@ def main():
     fig2_paired_scatter      (pairs,    f"{args.outdir}/fig_ratchet_2_scatter.png")
     fig3_force_by_orientation(pairs,    f"{args.outdir}/fig_ratchet_3_by_orientation.png")
     fig4_force_delta         (pairs,    f"{args.outdir}/fig_ratchet_4_per_pair_delta.png")
+    fig5_force_cdf           (by_grasp, pairs, f"{args.outdir}/fig_ratchet_5_cdf.png")
+    fig6_effect_sizes        (by_grasp, f"{args.outdir}/fig_ratchet_6_effect_sizes.png")
+    fig7_per_grasp_scatter   (by_grasp, f"{args.outdir}/fig_ratchet_7_per_grasp_scatter.png")
+    fig8_orientation_heatmap (by_grasp, f"{args.outdir}/fig_ratchet_8_orientation_heatmap.png")
 
     print(f"\nAll figures saved to {args.outdir}/")
 
