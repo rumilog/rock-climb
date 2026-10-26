@@ -325,3 +325,23 @@ the taxonomy label is actually doing to the diffusion decoder. Different problem
   (a) mean shifts towards the wrong-subtype mean and (b) sampling variance
   partially re-inflates. Strongest single causal figure for the reframe.
   Requires ~30 physical eval trials.
+
+## 2026-10-21: Paper figures
+- [x] 2026-10-21: Summarized paper + results, proposed figure list
+- [x] 2026-10-21: Architecture figure -> figures/architecture.pdf/.png (regen: python figures/make_architecture.py)
+
+## 2026-10-25: RA-L conversion (in progress)
+- [x] Back up full draft -> paper_long.tex (arXiv / long version)
+- [x] Convert paper.tex to IEEEtran journal (RA-L) format, \cite numeric, IEEEtran bib style
+- [x] First cutting pass, redone 2026-10-25 as deletion-only from paper_long.tex to keep author voice (~76% sentences verbatim)
+      merge testbed+holds figures, move orientation heatmap + latent t-SNE to supplementary
+- [x] references.bib deduped (first block removed, 19 unique entries, all cited keys present); author will reformat entries from Google Scholar
+- [ ] Compile in Overleaf, check page count against current RA-L limit
+- [ ] Resolve flagged inconsistencies (Dexonomy 31 vs 33 types; crimp orientation 18 N vs 27-8 N)
+
+## 2026-10-25: Figure set for RA-L (4 figures + Table I)
+- [x] paper.tex: Fig 2 = setup (hero + testbed + holds), Fig 3 = mechanism (a,b), Fig 4 = hardware (a,b); Table II dropped (long version keeps it)
+- [x] figures/make_paper_figures.py: shared style; layout verified with --placeholder (outputs *_PLACEHOLDER.*, never cited)
+- [ ] Export figures/figure_data.json from paired_session_20260515_074256.json + analysis scripts, run --data, check printed stats match paper (d, p, 44%->10%)
+- [ ] Confirm within-input std units (rad vs normalized) for Fig 3b y-label
+- [ ] Copy photos (fig_hero_grasp.jpg, fig_testbed_topdown.jpg, fig_hold_*.jpg) into figures/
