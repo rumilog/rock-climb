@@ -343,16 +343,30 @@ the taxonomy label is actually doing to the diffusion decoder. Different problem
 - [x] paper.tex: Fig 2 = setup (hero + testbed + holds), Fig 3 = mechanism (a,b), Fig 4 = hardware (a,b); Table II dropped (long version keeps it)
 - [x] figures/make_paper_figures.py: shared style; layout verified with --placeholder (outputs *_PLACEHOLDER.*, never cited)
 - [ ] Export figures/figure_data.json from paired_session_20260515_074256.json + analysis scripts, run --data, check printed stats match paper (d, p, 44%->10%)
-- [ ] Confirm within-input std units (rad vs normalized) for Fig 3b y-label
+- [x] Confirm within-input std units for Fig 3b y-label: rad (actions denormalised before L2 over 16x23 chunk)
 - [ ] Copy photos (fig_hero_grasp.jpg, fig_testbed_topdown.jpg, fig_hold_*.jpg) into figures/
 
 ## 2026-10-27: Figure regeneration status
 - [x] Fig 4 (fig_hardware.pdf) generated from paired_session_20260515_074256.json; stats match paper (medians, p, d w/ ddof=0, 61/14/5, bins)
 - [x] Fixed false caption claim: sloper W still has 7/20 complete failures (not "removed entirely"); pinch/jug W have 0
 - [x] Fig 3: paper temporarily uses old fig_action_distribution.png (user choice), with \todo flags on contradicted claims
-- [ ] Rerun eval_results/generate_action_dist_viz.py on lab machine (now exports figures/figure_data.json), then
-      `python figures/make_paper_figures.py --data figures/figure_data.json` -> fig_mechanism.pdf + stats; swap into paper.tex
+- [x] 2026-10-27 lab machine: reran generate_action_dist_viz.py (pre-rig ckpts pc_{with,no}_taxonomy, climbing_holds.zarr, 8/type, K=8)
+      -> figures/figure_data.json -> fig_mechanism.pdf. Within-spread W vs W/o (Wilcoxon, n=8):
+      crimp 0.443/0.452 +2% p=.945; sloper 0.162/0.212 +31% p=.039; pinch 0.206/0.243 +18% p=.078; jug 0.192/0.244 +27% p=.055
+- [~] fig_mechanism.pdf superseded by reset-pose probe figure (see below)
+- [ ] Decide: keep pre-rig ckpts for Fig 3 (paper footnote) or rerun on pc_*_taxonomy_rig + climbing_holds_rig.zarr (same models as Fig 4)
 - [ ] Fix "15-30% on crimp/sloper/pinch, jug indistinguishable" claims (abstract, contributions, sec V-A, caption, conclusion) to match rerun numbers; old image shows crimp ~+2%, sloper ~+31%, pinch ~+18%, jug ~+28%
 - [ ] Fix "32 inputs per grasp type" -> 8 per type (32 total) unless N_PER_GRASP changes
 - [ ] Decide Cohen's d convention (ddof=0 current vs textbook ddof=1, ~3% smaller per type)
 - [ ] Delete figures/*_PLACEHOLDER.* once fig_mechanism.pdf exists
+
+## 2026-10-27: Reset-pose probe (mechanism claim flipped)
+- [x] Offline closed-loop probe (scratch script, rig ckpts, 25 inputs/type x K=8, paired_eval loop: 200 steps, exec 8, 10 DDIM, perfect tracking, static PC)
+      From training first frame (hand pre-shaped per type): with 98%, without 98% correct grasp -> the old "no mode collapse" result
+      From eval RESET pose: with 94% (pinch 76%, 24% -> jug), WITHOUT 25% = every rollout ends in a jug hand (0/600 crimp/sloper/pinch correct)
+      Without's final hand moves 1.67 rad from reset, lands 0.79 from jug centroid (inside jug demo spread 0.86), cross-input spread 0.76 vs ~1.5 -> one behaviour for all holds
+      Consistent with hardware: W/o jug 14.4 N (near W's 15.7), W/o worst on others; jug smallest effect d=0.55
+- [x] Probe moved to eval_results/reset_pose_probe.py; user chose it as the new Fig. 3
+- [ ] Author to confirm: did the LEAP hand start pre-shaped in training? zarr says yes (first-frame hand 0.8-3 rad from RESET_HAND_ALLEGRO), author recalled reset pose
+- [ ] Build new Fig. 3 from probe (a: PCA of final hand from reset, W vs W/o; b: correct-grasp rate per type, both start conditions)
+- [ ] Apply minimal-edit plan to paper.tex (7 items, full list in PROGRESS_UPDATE.md section 4b); show diff + reworded-sentence list

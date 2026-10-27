@@ -78,6 +78,70 @@ requires exact alignment — see HANDOFF.md §Analysis Reproduction.
 
 ---
 
+## 4b. ⚠️ Mechanism Claim Flipped (2026-10-27) — read before editing the paper
+
+**Short version:** the paper's "precision regularizer, not a mode selector" claim was an
+artifact of the offline probe. From the pose the robot actually starts from at eval, the
+without-taxonomy policy does a **jug grasp on every hold**. The label *is* a mode selector
+at deployment. This is the new Fig. 3.
+
+### Why the old analysis was wrong
+- `generate_action_dist_viz.py` (and the latent kNN 99% result) fed the policies the
+  **first recorded frame** of training episodes.
+- In those frames the LEAP hand is already pre-shaped per grasp type. Recording starts
+  after park → PC scan → VR teleop resumes → operator positions arm → SPACE
+  (`collect_data.py:825-851`), so the hand is following the operator through that grasp's
+  per-type tuning offsets. First-frame hand distance from `RESET_HAND_ALLEGRO`:
+  crimp 2.97, sloper 1.12, pinch 1.40, jug 1.01 rad (no episode closer than 0.81).
+- `paired_eval.py` starts every trial from one neutral `RESET_HAND_ALLEGRO`
+  (`paired_eval.py:91`). So offline, the hand pose gave away the grasp type; on hardware it didn't.
+- **Open question for the author:** The author believed training also started at the reset
+  pose. The zarr says the hand didn't. Confirm from memory of collection before writing it up.
+
+### New probe: `eval_results/reset_pose_probe.py`
+Offline, no robot. Rig checkpoints, `climbing_holds_rig.zarr`, 25 inputs/type × K=8.
+Replays the paired_eval loop (200 steps, execute 8 of 16, 10 DDIM, static PC, assumes
+perfect tracking/no contact). Classifies final hand pose by nearest demonstrator
+final-hand centroid (demos self-classify 99%).
+
+```bash
+source ~/franka/bin/activate && source ~/frankapy/catkin_ws/devel/setup.bash
+cd ~/Desktop/tele && python3 eval_results/reset_pose_probe.py 25   # arg = inputs per type, ~1 min on 2080 Ti
+```
+
+| Start state | WITH correct grasp | WITHOUT correct grasp |
+|---|---|---|
+| Training first frame (pre-shaped hand) | 98% | 98% |
+| **Eval reset pose** | **94%** (crimp/sloper/jug 100%, pinch 76%, misses → jug) | **25%** (all 800 rollouts → jug) |
+
+- WITHOUT's hand moves 1.67 rad from reset, lands 0.79 from the jug centroid (inside the jug
+  demo spread of 0.86); cross-input spread 0.76 vs ~1.5 for the others → one behaviour for all holds.
+- Matches hardware: WITHOUT jug median 14.4 N ≈ WITH 15.7 N; jug has the smallest effect
+  (d = 0.55); WITHOUT is much worse on crimp/sloper/pinch.
+- Limits: simulated loop (perfect tracking, no contact); wrong grasps were not logged on hardware.
+
+### Old Fig. 3 rerun (pre-rig ckpts, superseded)
+`figures/fig_mechanism.pdf` + `figures/figure_data.json` (within-input spread, W vs W/o, n=8):
+crimp +2% p=.945, sloper +31% p=.039, pinch +18% p=.078, jug +27% p=.055. Contradicts the paper's
+"15–30% on crimp/sloper/pinch, jug indistinguishable". No longer the planned Fig. 3.
+
+### Paper edit plan (paper.tex only; minimal edits, keep author voice — delete/replace
+only false sentences, list every reworded spot)
+1. Abstract: replace "no classical mode collapse … 15–30% lower within-input variance … main
+   benefit is precision" with the reset-pose result (25% vs 94%). Hardware sentences unchanged.
+2. Intro "precision regularizer" paragraph + Contribution 3: "precision regularizer, not a
+   mode selector" → "mode selector at deployment".
+3. H2: keep ordering; reason becomes "unlabeled policy defaults to a jug grasp".
+4. Sec. V-A: keep mode-selection setup (now confirmed); replace footnote, "Within-input
+   variance" and "Interpretation" paragraphs with probe + start-state explanation; keep latent
+   and mean-action paragraphs as the "from recorded first frame" contrast.
+5. Fig. 3: build from probe — (a) PCA of final hand poses from reset, W vs W/o; (b) correct-grasp
+   rate per type under both start conditions. New caption.
+6. Conclusion: change only the "central finding is mechanistic…" sentence and the next one.
+7. One limitation sentence: simulated closed loop; wrong grasps not logged on hardware.
+
+---
+
 ## 5. What Remains for a Full Paper Submission
 
 ### Completed ✅
