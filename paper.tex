@@ -35,12 +35,10 @@ DP3-style point-cloud policy on a four-class label (crimp, sloper, pinch, and ju
 a Franka arm with a 16-DoF LEAP hand end effector. This is done in conjunction with a
 climbing-hold manipulation benchmark on a spring-constrained displacement testbed with
 a linear ratchet that produces a slip-force readout in newtons. The trained models we
-evaluated showed that the system without grasp-taxonomy does not have any classical
-mode collapse. The latent representation of the holds already separates grasp types
-(kNN accuracy 99\%), and its mean predicted actions differ by 90\% of the
-demonstrator's between type spread. The main benefit of taxonomy conditioning is
-\emph{precision}. In the diffusion decoder there is a 15--30\% lower within-input
-variance on grasp types. Hardware evaluation on 80 paired trials supports this
+evaluated showed that the system without grasp-taxonomy does have classical
+mode collapse once it starts from the robot's reset pose: in closed-loop rollouts it
+ends in a jug grasp on every hold (25\% correct grasp type, versus 94\% with
+taxonomy). Hardware evaluation on 80 paired trials supports this
 mechanistic prediction. Taxonomy conditioning improves median slip force by +5.2\,N
 (Wilcoxon signed-rank, $p < 0.001$, Cohen's $d = 0.95$), with effect sizes ordered by
 contact-tolerance tightness, from $d = 1.82$ on pinch to $d = 0.55$ on jug. The
@@ -95,13 +93,11 @@ The natural hypothesis is that taxonomy conditioning helps as a \emph{mode selec
 Without taxonomy a policy trained on multi grasp datasets could collapse to one grasp
 type and fail when faced with a mixed test set. In our example, it could collapse to,
 say, a jug grasp every time and fail for the other 3 grasping tasks. Our analysis
-rejects this theory. The non-taxonomy policy separates grasp types in its
-representation and produces actions that commit to four very distinct configurations,
-reaching 90\% of the training data's between-type spread. The taxonomy label acted as a
-precision regularizer, reducing within-input sampling variability, creating a tighter
-diffusion decoder output distribution around the correct subtype. This prediction is
-testable on hardware: conditioning should help most in cases where contact tolerances
-are precise (crimp, sloper, pinch), and least where geometry is looser (jug). The
+supports this theory. Started from the robot's reset pose, the non-taxonomy policy
+collapses to a jug grasp on every hold. It only separates grasp types when its starting
+hand pose already carries them, as in the first frame of a recorded demonstration. This
+prediction is testable on hardware: conditioning should help least on the jug, the
+grasp the non-taxonomy policy defaults to. The
 empirical per-type success pattern follows suit.
 
 \paragraph*{Contributions}
@@ -114,9 +110,9 @@ empirical per-type success pattern follows suit.
     displacement testbed and linear ratcheting mechanism, providing continuous
     grip-stability measurements across five hold orientations per grasp/hold type.
   \item A \textbf{mechanistic characterisation} showing that taxonomy conditioning
-    acts as a precision regularizer (15--30\% within-input variance reduction on
-    precision-critical types), not a mode selector, with evidence from latent-space
-    analysis, action-distribution comparison, and per-type robot evaluation.
+    acts as a mode selector at deployment (without it, the policy collapses to a jug
+    grasp from the reset pose), with evidence from latent-space
+    analysis, closed-loop rollouts, and per-type robot evaluation.
   \item A \textbf{paired evaluation protocol} with global model-order
     alternation and per-trial point-cloud capture, supporting Wilcoxon signed-rank
     inference and Cohen's $d$ on paired differences.
@@ -365,7 +361,7 @@ pair begins.
 Prior to the paired evaluation we stated two hypotheses: \textbf{H1}
 (primary)---the conditioned model achieves higher median slip force than the
 unconditioned model across all four grasp types; and \textbf{H2}
-(precision-regularizer)---effect sizes are largest on precision-critical grasp
+(ordering)---effect sizes are largest on precision-critical grasp
 types (crimp, sloper, pinch) and smallest on the geometrically forgiving jug. The
 mechanistic analysis below motivates H2, and the hardware evaluation tests both.
 
@@ -375,33 +371,26 @@ A standard hypothesis for why taxonomy conditioning helps is \emph{mode selectio
 without the label, a policy trained on mixed grasp types might average across modes,
 collapsing to a single blurred behaviour. We test this directly using the trained
 with-taxonomy and without-taxonomy policies on matched inputs ($K=8$ rollouts per
-input, 32 inputs per grasp type \todo{script: 8 per type, 32 total}).\footnote{The within-input variance and latent
+input, 25 inputs per grasp type).\footnote{The latent and mean-action
 analyses reported here were computed on the pre-rig checkpoints (the precursor
 dataset to the spring-testbed dataset used for the hardware results in
-\S\ref{sec:robot_eval}). The architecture, loss, and training recipe are identical;
-the mechanism characterised here is a property of the conditioning branch and is
-expected to transfer.}
+\S\ref{sec:robot_eval}). The closed-loop rollouts use the spring-testbed checkpoints
+evaluated on hardware.}
 
-% TODO: replace with fig_mechanism.pdf (single column, panels a/b) once
-% eval_results/generate_action_dist_viz.py has been rerun and exported figure_data.json.
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_action_distribution.png}
-\caption{What the grasp label actually changes in the diffusion decoder
-($K=8$ rollouts per input $\times$ 32 inputs per grasp type \todo{script uses 8 inputs
-per type, 32 total}). (A) Predicted
-actions in PCA: filled triangles (\emph{with} taxonomy) and outlined triangles
-(\emph{without}) overlap closely per grasp type---both policies commit to the
-same modal action. (B) Within-input sampling spread: the without-taxonomy
-policy samples with 15--30\% higher action standard deviation on the
-precision-critical types (crimp, sloper, pinch); jug is statistically
-indistinguishable \todo{image shows crimp $\approx$ equal and jug higher; recheck after
-rerun}. (C) Mean L2 distance between the two models' predicted
-actions on matched inputs is largest on jug---the only type where the two
-policies actually disagree, not coincidentally the only type with mm-scale
-contact slack.}
+\includegraphics[width=\columnwidth]{fig_grasp_selection.pdf}
+\caption{Which grasp each policy executes ($K=8$ closed-loop rollouts per input
+$\times$ 25 inputs per grasp type, spring-testbed checkpoints). (a) Final hand poses
+of rollouts started from the deployment reset pose, projected onto the first two
+principal components of the demonstrators' final hand poses (light markers; marker
+shape = grasp type of the hold). With taxonomy (filled), rollouts land on the
+demonstrated grasp for their hold; without taxonomy (outlined), rollouts for every
+hold land on the jug grasp. (b) Share of rollouts whose final hand pose is nearest the
+correct grasp type. Bars: started from the reset pose; ticks: started from the first
+frame of a recorded demonstration, where both policies are near 100\%.}
 \label{fig:mech}
-\end{figure*}
+\end{figure}
 
 \paragraph*{Latent-space separation}
 We compute silhouette score and stratified 5-fold kNN accuracy on the fused encoder
@@ -416,28 +405,33 @@ the representation. The point-cloud branch alone does not separate the types
 We compute the between-type spread of mean predicted final-step hand poses across all
 four grasp types. The without-taxonomy policy produces means that differ across
 types at 90\% of the demonstrator's between-type spread (0.316\,rad vs.\ 0.352\,rad
-for demonstrators; the with-taxonomy policy produces 0.314\,rad). The unconditioned
-policy does not collapse to a single behaviour mode (Fig.~\ref{fig:mech}A).
+for demonstrators; the with-taxonomy policy produces 0.314\,rad). From recorded
+demonstration frames, the unconditioned
+policy does not collapse to a single behaviour mode.
 
-\paragraph*{Within-input sampling variance}
-The difference lies in the spread of individual rollouts around each conditional
-mean. On precision-critical grasp types (crimp, sloper, pinch; sub-millimetre
-contact tolerances), the without-taxonomy policy samples with 15--30\% higher
-within-input standard deviation than the with-taxonomy policy. On the jug, whose
-deep incut pocket gives millimetre-scale contact slack, the two policies are
-statistically indistinguishable in within-input variance
-(Fig.~\ref{fig:mech}B). \todo{Fig.~B shows crimp $\approx$ equal and jug clearly higher,
-and no test was run; recheck all ``15--30\%'' claims (abstract, contributions,
-conclusion) after the rerun}
+\paragraph*{Closed-loop rollouts from the reset pose}
+Both analyses above use the first frame of recorded demonstrations as input. At
+deployment, every trial instead starts from one fixed reset pose. We therefore roll
+out each policy in closed loop from that reset pose, replicating the evaluation loop
+(200 steps at 10\,Hz, 8 of 16 predicted actions executed per replan, the hold's
+recorded point cloud held fixed, commanded joints assumed tracked exactly), and assign
+each final hand pose to the nearest demonstrator grasp-type mean (demonstrations
+assign to their own type 99\% of the time). From the recorded first frame, both
+policies execute the correct grasp in 98\% of rollouts. From the reset pose, the
+with-taxonomy policy does so in 94\% (crimp, sloper, jug 100\%; pinch 76\%, with the
+misses landing on jug), while the without-taxonomy policy does so in only 25\%: every
+one of its 800 rollouts ends in a jug grasp, whatever the hold (Fig.~\ref{fig:mech}).
 
-\paragraph*{Interpretation: taxonomy as a precision regularizer}
-Together, these results rule out the mode-selector account: the unconditional
-representation already commits to the correct mode, so the label cannot be routing
-to it. The role left for the label is to tighten the diffusion decoder's sampling
-distribution around that mode, reducing per-rollout variance. The closest analogues
-are classifier-free guidance in image diffusion \cite{ho2022cfg}, which sharpens
-per-pixel predictions without changing the modal image, and low-temperature sampling
-in language models. The label is a precision knob, not a switch.
+\paragraph*{Interpretation: taxonomy as a mode selector}
+Together, these results support the mode-selector account at deployment. During data
+collection the operator positions the arm and hand under VR teleoperation before
+recording begins, so the first recorded frame already holds a hand pre-shaped for its
+grasp type (0.8--3.0\,rad from the reset pose) \todo{author: confirm hand was
+pre-shaped at recording start}. The unconditional policy learns to read grasp type from
+this hand pose, which is why its latent separation comes from proprioception rather
+than the point cloud. At deployment every trial starts from the same reset pose, that
+cue is gone, and the policy defaults to a single grasp. The taxonomy label supplies
+the missing information. The label is a switch, not a precision knob.
 
 \subsection{Hardware Evaluation}
 \label{sec:robot_eval}
@@ -471,12 +465,13 @@ Taxonomy conditioning improves grip strength on every grasp type tested
 Cohen's $d = 0.95$).
 
 \paragraph*{H2: ordering across grasp types}
-The effect-size ordering matches the precision-regularizer prediction from
+The effect-size ordering matches the prediction from
 \S\ref{sec:mechanistic}. Pinch, the narrowest hold, shows the largest effect
 ($d = 1.82$), with the conditioned model winning all 20 pairs. Sloper ($d = 1.08$)
 and crimp ($d = 1.05$) follow, both high-precision contact geometries. The jug,
 whose deep incut pocket accommodates sub-centimetre positioning error, gives the
-smallest effect ($d = 0.55$). Pinch and crimp share the same $\Delta$ median but
+smallest effect ($d = 0.55$), and is the grasp the without-taxonomy policy defaults
+to. Pinch and crimp share the same $\Delta$ median but
 pinch's larger $d$ reflects a tighter distribution of paired differences. Aggregating
 across types, the conditioned model wins 61 of 80 pairs, ties 14, and loses 5.
 
@@ -513,10 +508,9 @@ median between-trial PC centroid drift was sub-millimetre, well below the post-h
 
 \paragraph*{Failure-mode rescue as the dominant mechanism}
 The gain from conditioning is concentrated in the lower tail of the slip-force
-distribution. The precision-regularizer view supplies a simple explanation: when
-sampling variance exceeds the geometric contact tolerance, each draw is rolled against
-the failure region, and shrinking the variance shrinks the failure-set probability
-mass.
+distribution. The mode-selector view supplies a simple explanation: without the label,
+the policy executes a jug grasp on crimp, sloper, and pinch holds, and a grasp shaped
+for the wrong hold slips under load.
 
 \paragraph*{Benchmark design}
 The spring displacement testbed provides experimental control unavailable in standard
@@ -526,8 +520,8 @@ and the ratchet gives a continuous reading rather than a threshold-dependent bin
 \paragraph*{Limitations}
 All 200 training episodes come from one operator and one teleop session, and each
 grasp category is represented by exactly one physical hold. The per-type effect sizes
-reported here therefore conflate ``the precision regularizer effect on that grasp
-type'' with ``the precision regularizer effect on this hold.'' A held-out crimp variant
+reported here therefore conflate ``the conditioning effect on that grasp
+type'' with ``the conditioning effect on this hold.'' A held-out crimp variant
 (\textit{test\_edge}) is collected but not evaluated in this paper. The specific
 Cohen's $d$ values are platform-specific (Franka + LEAP only) until shown otherwise.
 The spring testbed measures grip force against displacement on one fixed axis, which
@@ -548,10 +542,10 @@ climbing hold manipulation, together with a climbing-hold benchmark on a
 spring-constrained displacement testbed instrumented with a linear ratchet that
 yields a continuous slip-force readout. The central finding is mechanistic:
 taxonomy conditioning in a dexterous diffusion policy functions as a
-\textbf{precision regularizer}. The unconditioned policy already separates grasp
-types in representation and commits to type-distinct mean actions; the taxonomy label
-contributes a 15--30\% reduction in within-input sampling variance on
-precision-critical grasp types. Hardware evaluation on 80 paired trials supports this
+\textbf{mode selector}. The unconditioned policy separates grasp types only when its
+starting hand pose already encodes them; from the deployment reset pose it collapses to
+a single jug grasp, while the conditioned policy selects the correct grasp in 94\% of
+rollouts. Hardware evaluation on 80 paired trials supports this
 account: median slip force rises by 5.2\,N with conditioning, effect sizes are ordered
 by contact-tolerance tightness, and the complete-failure rate falls from 44\% of trials
 to 10\%.

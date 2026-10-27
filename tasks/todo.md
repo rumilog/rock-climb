@@ -368,5 +368,8 @@ the taxonomy label is actually doing to the diffusion decoder. Different problem
       Consistent with hardware: W/o jug 14.4 N (near W's 15.7), W/o worst on others; jug smallest effect d=0.55
 - [x] Probe moved to eval_results/reset_pose_probe.py; user chose it as the new Fig. 3
 - [ ] Author to confirm: did the LEAP hand start pre-shaped in training? zarr says yes (first-frame hand 0.8-3 rad from RESET_HAND_ALLEGRO), author recalled reset pose
-- [ ] Build new Fig. 3 from probe (a: PCA of final hand from reset, W vs W/o; b: correct-grasp rate per type, both start conditions)
-- [ ] Apply minimal-edit plan to paper.tex (7 items, full list in PROGRESS_UPDATE.md section 4b); show diff + reworded-sentence list
+- [x] New Fig. 3 = figures/fig_grasp_selection.pdf (probe exports 'grasp_selection' to figure_data.json; `python figures/make_paper_figures.py --data figures/figure_data.json`)
+- [x] Applied edits 1-6 to paper.tex (+ Discussion/Limitations/H2-results precision wording); paper_long.tex untouched
+- [ ] Edit 7: limitation sentence (simulated closed loop, wrong grasps not logged on hardware)
+- [ ] Resolve \todo{confirm hand pre-shaped} in Sec. V-A; decide on title ("Classifier-Regularized") and "ordered by contact-tolerance tightness" wording
+- [ ] Compile in Overleaf; fig:mech is now single-column

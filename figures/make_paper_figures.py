@@ -1,6 +1,8 @@
 """Result figures for the RA-L paper, in one consistent style.
 
-  fig_mechanism.pdf  (single column)  (a) PCA of predicted actions, (b) within-input spread
+  fig_grasp_selection.pdf (single column)  Fig. 3: (a) final hand poses from the eval reset pose,
+                                           (b) correct-grasp rate (eval_results/reset_pose_probe.py)
+  fig_mechanism.pdf  (single column)  superseded: (a) PCA of predicted actions, (b) within-input spread
   fig_hardware.pdf   (full width)     (a) paired slip force + stats, (b) failure-mode bins
 
 Usage:
@@ -162,6 +164,74 @@ def fig_mechanism(mech, placeholder):
     return fig
 
 
+# ---------------------------------------------------------------- Fig. 3 (reset-pose probe)
+def fig_grasp_selection(gs):
+    """(a) final hand poses from the eval reset pose in demo-PCA space, (b) correct-grasp rate."""
+    from sklearn.decomposition import PCA
+    fig, (ax_a, ax_b) = plt.subplots(2, 1, figsize=(COL_W, 4.3),
+                                     gridspec_kw={"height_ratios": [1.35, 1], "hspace": 0.42})
+
+    # (a) PCA fit on demonstrator final hand poses; rollouts projected into it.
+    demo = {t: np.asarray(gs["demo_final_hand"][t]) for t in TYPES}
+    pca = PCA(n_components=2).fit(np.vstack(list(demo.values())))
+    true = np.asarray(gs["true_type"])
+    for t in TYPES:
+        d = pca.transform(demo[t])
+        ax_a.scatter(d[:, 0], d[:, 1], s=10, marker=MARKERS[t], color=GRID, lw=0, zorder=1)
+        c = np.median(d, 0)
+        ax_a.annotate(t, c, xytext=(0, 9), textcoords="offset points", ha="center",
+                      va="bottom", color=INK, fontsize=8, zorder=5,
+                      bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.85))
+    for key in ["without", "with"]:
+        xy = pca.transform(np.asarray(gs["reset"][key]["final_hand"]))
+        for t in TYPES:
+            m = xy[true == t]
+            if key == "with":
+                ax_a.scatter(m[:, 0], m[:, 1], s=12, marker=MARKERS[t], color=C_WITH,
+                             edgecolors="white", linewidths=0.3, alpha=0.8, zorder=3)
+            else:
+                ax_a.scatter(m[:, 0], m[:, 1], s=12, marker=MARKERS[t], facecolors="none",
+                             edgecolors=C_WITHOUT, linewidths=0.6, alpha=0.8, zorder=2)
+    ax_a.set_xlabel("PC 1 (final hand pose)")
+    ax_a.set_ylabel("PC 2")
+    ax_a.set_xticks([])
+    ax_a.set_yticks([])
+    ax_a.margins(0.1)
+    ax_a.legend(handles=[
+        plt.Line2D([], [], marker="o", ls="", color=C_WITH, label="With taxonomy"),
+        plt.Line2D([], [], marker="o", ls="", markerfacecolor="none",
+                   markeredgecolor=C_WITHOUT, label="Without taxonomy"),
+        plt.Line2D([], [], marker="o", ls="", color=GRID, label="Demonstrations"),
+    ], loc="lower right", bbox_to_anchor=(1.02, 1.0), ncol=2, handletextpad=0.05,
+        columnspacing=0.5, borderaxespad=0.1, fontsize=7)
+    panel_label(ax_a, "a")
+
+    # (b) Correct-grasp rate from the reset pose (bars) vs the recorded first frame (ticks).
+    x = np.arange(len(TYPES))
+    bw = 0.36
+    for off, key, col in [(-bw / 2, "with", C_WITH), (bw / 2, "without", C_WITHOUT)]:
+        reset = np.array([100 * gs["reset"][key]["correct_rate"][t] for t in TYPES])
+        first = np.array([100 * gs["first_frame"][key]["correct_rate"][t] for t in TYPES])
+        ax_b.bar(x + off, reset, width=bw - 0.03, color=col, zorder=2)
+        ax_b.scatter(x + off, first, marker="_", s=60, color=INK, linewidths=1.0, zorder=3)
+        for xi, v in zip(x + off, reset):
+            ax_b.text(xi, v + 2, f"{v:.0f}", ha="center", va="bottom", fontsize=6.5, color=MUTED)
+    ax_b.set_xticks(x, TYPES)
+    ax_b.set_ylabel("Correct grasp (%)")
+    ax_b.set_ylim(0, 118)
+    ax_b.set_yticks([0, 25, 50, 75, 100])
+    ygrid(ax_b)
+    ax_b.tick_params(axis="x", length=0)
+    ax_b.legend(handles=[Patch(color=C_WITH, label="With, from reset"),
+                         Patch(color=C_WITHOUT, label="Without, from reset"),
+                         plt.Line2D([], [], marker="_", ls="", ms=8, mew=1.0, color=INK,
+                                    label="From recorded first frame")],
+                loc="upper left", bbox_to_anchor=(0, -0.1), ncol=2, handlelength=1.0,
+                columnspacing=0.8)
+    panel_label(ax_b, "b")
+    return fig
+
+
 # ---------------------------------------------------------------- Fig. 4
 def fig_hardware(hw, placeholder):
     fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(FULL_W, 2.55),
@@ -294,7 +364,8 @@ def load_session(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--session", type=Path, help="paired_session_*.json -> fig_hardware")
-    ap.add_argument("--data", type=Path, help="figure_data.json with a 'mechanism' key -> fig_mechanism")
+    ap.add_argument("--data", type=Path,
+                    help="figure_data.json: 'grasp_selection' -> fig_grasp_selection, 'mechanism' -> fig_mechanism")
     ap.add_argument("--placeholder", action="store_true", help="layout check only")
     args = ap.parse_args()
     if not (args.session or args.data or args.placeholder):
@@ -311,9 +382,12 @@ def main():
             hw = load_session(args.session)
             figs.append(("fig_hardware", fig_hardware(hw, False)))
         if args.data:
-            mech = json.loads(args.data.read_text())["mechanism"]
-            figs.append(("fig_mechanism", fig_mechanism(mech, False)))
-            print_mech_stats(mech)
+            data = json.loads(args.data.read_text())
+            if "grasp_selection" in data:
+                figs.append(("fig_grasp_selection", fig_grasp_selection(data["grasp_selection"])))
+            if "mechanism" in data:  # superseded old Fig. 3 (within-input spread)
+                figs.append(("fig_mechanism", fig_mechanism(data["mechanism"], False)))
+                print_mech_stats(data["mechanism"])
     for name, fig in figs:
         for ext in ("pdf", "png"):
             fig.savefig(OUT_DIR / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.02, dpi=300)

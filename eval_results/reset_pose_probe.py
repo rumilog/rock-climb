@@ -77,10 +77,17 @@ first = np.stack([(inputs["obs_state"][i, 0] + 1.0) / 2.0 * s_rng + s_min for i 
 reset = np.tile(np.concatenate([RESET_ARM, RESET_HAND]), (N, 1))
 true = np.repeat(gids, K)
 
-for cond, start in [("training first frame", first), ("eval reset pose", reset)]:
+out = {"source": {"with_ckpt": str(g.WITH_CKPT), "no_ckpt": str(g.NO_CKPT), "zarr": str(g.ZARR_PATH),
+                  "n_per_grasp": N_PER_GRASP, "k_samples": K, "max_steps": MAX_STEPS,
+                  "action_horizon": EXEC, "inference_steps": INF},
+       "true_type": [NAMES[t] for t in true],
+       "demo_final_hand": {NAMES[t]: final_hand[egid == t].tolist() for t in range(4)}}
+for key, cond, start in [("first_frame", "training first frame", first), ("reset", "eval reset pose", reset)]:
     print(f"\n=== start state: {cond} ===")
+    out[key] = {}
     for m, p in pol.items():
         fin = rollout(p, start)[:, 7:]
+        out[key][m] = {"final_hand": fin.tolist()}
         pred = np.linalg.norm(fin[:, None] - centroids[None], axis=2).argmin(1)
         conf = np.zeros((4, 4), int)
         for t, q in zip(true, pred):
@@ -92,3 +99,11 @@ for cond, start in [("training first frame", first), ("eval reset pose", reset)]
               f"spread across inputs {np.linalg.norm(fin - fin.mean(0), axis=1).mean():.2f}")
         print("         confusion (rows = true, cols = predicted c/s/p/j): " +
               " | ".join(" ".join(f"{v:2d}" for v in r) for r in conf))
+        out[key][m]["correct_rate"] = {NAMES[t]: conf[t, t] / conf[t].sum() for t in range(4)}
+
+# export for figures/make_paper_figures.py (Fig. 3)
+out_json = ROOT / "figures" / "figure_data.json"
+data = json.loads(out_json.read_text()) if out_json.exists() else {}
+data["grasp_selection"] = out
+out_json.write_text(json.dumps(data))
+print(f"Saved {out_json}")
