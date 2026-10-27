@@ -416,6 +416,27 @@ def main():
         bw = between [gids == g].mean()
         print(f"{name:8s} {ww:12.3f} {wn:15.3f} {bw:18.3f}")
 
+    # ── export for figures/make_paper_figures.py (paper-styled Fig. 3) ────────
+    out_json = ROOT / "figures" / "figure_data.json"
+    data = json.loads(out_json.read_text()) if out_json.exists() else {}
+    data["mechanism"] = {
+        "source": {"with_ckpt": str(WITH_CKPT), "no_ckpt": str(NO_CKPT),
+                   "zarr": str(ZARR_PATH), "n_per_grasp": N_PER_GRASP,
+                   "k_samples": K_SAMPLES, "pca_var_explained": var_exp.tolist()},
+        "pca": {GRASP_ID_TO_NAME[g].lower(): {
+                    "with": xy_w[gids == g].reshape(-1, 2).tolist(),
+                    "without": xy_n[gids == g].reshape(-1, 2).tolist()}
+                for g in sorted(np.unique(gids))},
+        "within_spread": {GRASP_ID_TO_NAME[g].lower(): {
+                    "with": within_w[gids == g].tolist(),
+                    "without": within_n[gids == g].tolist()}
+                for g in sorted(np.unique(gids))},
+        "between_l2": {GRASP_ID_TO_NAME[g].lower(): between[gids == g].tolist()
+                       for g in sorted(np.unique(gids))},
+    }
+    out_json.write_text(json.dumps(data))
+    print(f"Saved {out_json}")
+
 
 if __name__ == "__main__":
     main()

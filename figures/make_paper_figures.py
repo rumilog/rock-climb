@@ -4,7 +4,8 @@
   fig_hardware.pdf   (full width)     (a) paired slip force + stats, (b) failure-mode bins
 
 Usage:
-  python figures/make_paper_figures.py --data figures/figure_data.json
+  python figures/make_paper_figures.py --session eval_results/paired_session_20260515_074256.json
+  python figures/make_paper_figures.py --data figures/figure_data.json   # mechanism
   python figures/make_paper_figures.py --placeholder   # layout check only, never for the paper
 
 figure_data.json (export it from the eval JSON / analysis scripts):
@@ -13,8 +14,8 @@ figure_data.json (export it from the eval JSON / analysis scripts):
       "crimp": {"with": [20 floats], "without": [20 floats]}, ... sloper, pinch, jug
     },
     "mechanism": {
-      "pca":        {"crimp": {"with": [[pc1, pc2], ...], "without": [[pc1, pc2], ...]}, ...},
-      "within_std": {"crimp": {"with": [32 floats], "without": [32 floats]}, ...}
+      "pca":           {"crimp": {"with": [[pc1, pc2], ...], "without": [[pc1, pc2], ...]}, ...},
+      "within_spread": {"crimp": {"with": [8 floats], "without": [8 floats]}, ...}  # one per input
     }
   }
 
@@ -84,7 +85,9 @@ def paired_stats(w, wo):
     w, wo = np.asarray(w, float), np.asarray(wo, float)
     diff = w - wo
     p = wilcoxon(w, wo, alternative="two-sided").pvalue if np.any(diff) else 1.0
-    sd = diff.std(ddof=1)
+    # ddof=0 matches eval_results/generate_ratchet_figures.py:cohen_d and the paper's
+    # reported d values; the textbook d_z uses ddof=1 (~3% smaller at n=20).
+    sd = diff.std(ddof=0)
     d = diff.mean() / sd if sd > 0 else float("inf")
     return {"d_median": np.median(w) - np.median(wo), "p": p, "d": d,
             "wins": int((diff > 0).sum()), "ties": int((diff == 0).sum()),
@@ -92,7 +95,7 @@ def paired_stats(w, wo):
 
 
 def fmt_p(p):
-    return "$p<0.001$" if p < 0.001 else f"$p={p:.3f}$"
+    return "$p<0.001$" if p < 0.001 else f"$p={p:.2g}$"
 
 
 def watermark(fig):
@@ -135,7 +138,7 @@ def fig_mechanism(mech, placeholder):
     bw = 0.36
     tops = []
     for off, key, col in [(-bw / 2, "with", C_WITH), (bw / 2, "without", C_WITHOUT)]:
-        vals = [np.asarray(mech["within_std"][t][key], float) for t in TYPES]
+        vals = [np.asarray(mech["within_spread"][t][key], float) for t in TYPES]
         mean = np.array([v.mean() for v in vals])
         se = np.array([v.std(ddof=1) / np.sqrt(len(v)) for v in vals])
         ax_b.bar(x + off, mean, width=bw - 0.03, color=col, zorder=2)
@@ -143,12 +146,12 @@ def fig_mechanism(mech, placeholder):
                       capsize=1.5, zorder=3)
         tops.append(mean + se)
     for i, t in enumerate(TYPES):
-        w = np.mean(mech["within_std"][t]["with"])
-        wo = np.mean(mech["within_std"][t]["without"])
+        w = np.mean(mech["within_spread"][t]["with"])
+        wo = np.mean(mech["within_spread"][t]["without"])
         ax_b.text(i, max(tops[0][i], tops[1][i]) * 1.03, f"{100 * (wo / w - 1):+.0f}%",
                   ha="center", va="bottom", fontsize=7, color=MUTED)
     ax_b.set_xticks(x, TYPES)
-    ax_b.set_ylabel("Within-input std (rad)")
+    ax_b.set_ylabel("Within-input spread (L2, rad)")
     ax_b.set_ylim(0, max(np.max(tops[0]), np.max(tops[1])) * 1.22)
     ygrid(ax_b)
     ax_b.tick_params(axis="x", length=0)
@@ -245,6 +248,19 @@ def print_stats(hw):
         print(f"bins {key:8s} " + "  ".join(f"{n}: {100 * v:.0f}%" for n, v in zip(BIN_NAMES, share)))
 
 
+def print_mech_stats(mech):
+    """Per-type within-input spread, W/o vs W, with a paired Wilcoxon over inputs."""
+    print(f"{'type':8s} {'spread W':>9s} {'spread W/o':>11s} {'W/o vs W':>9s} {'p':>7s}  n")
+    for t in TYPES:
+        w = np.asarray(mech["within_spread"][t]["with"], float)
+        wo = np.asarray(mech["within_spread"][t]["without"], float)
+        p = wilcoxon(wo, w, alternative="two-sided").pvalue
+        print(f"{t:8s} {w.mean():9.3f} {wo.mean():11.3f} {100 * (wo.mean() / w.mean() - 1):+8.0f}% "
+              f"{p:7.3f}  {len(w)}")
+    print("note: n is the number of inputs per type; with n=8 the smallest possible "
+          "two-sided Wilcoxon p is 0.0078, and a non-significant p is not evidence of no difference.")
+
+
 def placeholder_data():
     """Synthetic numbers for checking layout ONLY. Output files are suffixed _PLACEHOLDER."""
     rng = np.random.default_rng(1)
@@ -259,25 +275,51 @@ def placeholder_data():
                   "without": (c + rng.normal(0, 0.45, (32, 2))).tolist()}
         std[t] = {"with": rng.normal(0.05, 0.01, 32).tolist(),
                   "without": rng.normal(0.062, 0.012, 32).tolist()}
-    return {"hardware": hw, "mechanism": {"pca": pca, "within_std": std}}
+    return {"hardware": hw, "mechanism": {"pca": pca, "within_spread": std}}
+
+
+def load_session(path):
+    """Hardware data straight from a paired_eval session JSON, kept in pair order."""
+    session = json.loads(Path(path).read_text())
+    hw = {t: {"with": [], "without": []} for t in TYPES}
+    for p in sorted(session["pairs"], key=lambda p: p["pair"]):
+        if p.get("aborted"):
+            continue
+        stats = p["pc_stats"]
+        hw[p["grasp_type"]]["with"].append(stats["WITH_TAXONOMY"]["ratchet"]["force_N"])
+        hw[p["grasp_type"]]["without"].append(stats["WITHOUT_TAXONOMY"]["ratchet"]["force_N"])
+    return hw
 
 
 def main():
     ap = argparse.ArgumentParser()
-    g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--data", type=Path)
-    g.add_argument("--placeholder", action="store_true")
+    ap.add_argument("--session", type=Path, help="paired_session_*.json -> fig_hardware")
+    ap.add_argument("--data", type=Path, help="figure_data.json with a 'mechanism' key -> fig_mechanism")
+    ap.add_argument("--placeholder", action="store_true", help="layout check only")
     args = ap.parse_args()
+    if not (args.session or args.data or args.placeholder):
+        ap.error("pass --session and/or --data, or --placeholder")
 
-    data = placeholder_data() if args.placeholder else json.loads(args.data.read_text())
-    suffix = "_PLACEHOLDER" if args.placeholder else ""
-    for name, fig in [("fig_mechanism", fig_mechanism(data["mechanism"], args.placeholder)),
-                      ("fig_hardware", fig_hardware(data["hardware"], args.placeholder))]:
+    figs, hw = [], None
+    if args.placeholder:
+        data = placeholder_data()
+        hw = data["hardware"]
+        figs = [("fig_mechanism_PLACEHOLDER", fig_mechanism(data["mechanism"], True)),
+                ("fig_hardware_PLACEHOLDER", fig_hardware(hw, True))]
+    else:
+        if args.session:
+            hw = load_session(args.session)
+            figs.append(("fig_hardware", fig_hardware(hw, False)))
+        if args.data:
+            mech = json.loads(args.data.read_text())["mechanism"]
+            figs.append(("fig_mechanism", fig_mechanism(mech, False)))
+            print_mech_stats(mech)
+    for name, fig in figs:
         for ext in ("pdf", "png"):
-            fig.savefig(OUT_DIR / f"{name}{suffix}.{ext}", bbox_inches="tight",
-                        pad_inches=0.02, dpi=300)
-        print("wrote", OUT_DIR / f"{name}{suffix}.pdf")
-    print_stats(data["hardware"])
+            fig.savefig(OUT_DIR / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.02, dpi=300)
+        print("wrote", OUT_DIR / f"{name}.pdf")
+    if hw:
+        print_stats(hw)
 
 
 if __name__ == "__main__":

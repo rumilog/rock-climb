@@ -345,3 +345,14 @@ the taxonomy label is actually doing to the diffusion decoder. Different problem
 - [ ] Export figures/figure_data.json from paired_session_20260515_074256.json + analysis scripts, run --data, check printed stats match paper (d, p, 44%->10%)
 - [ ] Confirm within-input std units (rad vs normalized) for Fig 3b y-label
 - [ ] Copy photos (fig_hero_grasp.jpg, fig_testbed_topdown.jpg, fig_hold_*.jpg) into figures/
+
+## 2026-10-27: Figure regeneration status
+- [x] Fig 4 (fig_hardware.pdf) generated from paired_session_20260515_074256.json; stats match paper (medians, p, d w/ ddof=0, 61/14/5, bins)
+- [x] Fixed false caption claim: sloper W still has 7/20 complete failures (not "removed entirely"); pinch/jug W have 0
+- [x] Fig 3: paper temporarily uses old fig_action_distribution.png (user choice), with \todo flags on contradicted claims
+- [ ] Rerun eval_results/generate_action_dist_viz.py on lab machine (now exports figures/figure_data.json), then
+      `python figures/make_paper_figures.py --data figures/figure_data.json` -> fig_mechanism.pdf + stats; swap into paper.tex
+- [ ] Fix "15-30% on crimp/sloper/pinch, jug indistinguishable" claims (abstract, contributions, sec V-A, caption, conclusion) to match rerun numbers; old image shows crimp ~+2%, sloper ~+31%, pinch ~+18%, jug ~+28%
+- [ ] Fix "32 inputs per grasp type" -> 8 per type (32 total) unless N_PER_GRASP changes
+- [ ] Decide Cohen's d convention (ddof=0 current vs textbook ddof=1, ~3% smaller per type)
+- [ ] Delete figures/*_PLACEHOLDER.* once fig_mechanism.pdf exists
