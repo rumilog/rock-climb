@@ -373,3 +373,14 @@ the taxonomy label is actually doing to the diffusion decoder. Different problem
 - [ ] Edit 7: limitation sentence (simulated closed loop, wrong grasps not logged on hardware)
 - [ ] Resolve \todo{confirm hand pre-shaped} in Sec. V-A; decide on title ("Classifier-Regularized") and "ordered by contact-tolerance tightness" wording
 - [ ] Compile in Overleaf; fig:mech is now single-column
+
+## 2026-10-29: Reframe paper.tex around "taxonomy = switch; point clouds don't identify the grasp"
+- [ ] Title: Classifier-Regularized -> Classifier-Routed (keeps CRAG acronym)
+- [ ] Abstract, intro P2, contributions 2-3: holds look alike to the policy's PC encoder -> label selects the grasp
+- [ ] H2 kept as pre-stated (it was stated before eval); only the "motivates H2" sentence and H2 results reasoning change
+- [ ] V-A latent + interpretation paragraphs; Discussion "Why climbing holds"; limitation (simulated loop, PC-vs-shortcut ambiguity); conclusion
+- [ ] Claim only what is measured: "encoder does not separate holds" (silhouette -0.03, 5-NN 39%), not "holds are geometrically similar"
+- [ ] Optional check: classifier on point clouds alone (rig zarr) to separate "PCs too similar" from "shortcut via hand pre-shape"
+- [x] 2026-10-29: AI-tone pass applied to paper.tex (items 1-18), baseline named "without-taxonomy" throughout, American spelling throughout
+- [x] paper_long.tex marked OUTDATED (comment header + red box under title); otherwise untouched
+- [x] 2026-10-29: Title -> 'Grasp-Taxonomy Conditioning as a Mode Switch for Dexterous Grasping of Climbing Holds'; method renamed CRAG -> BetaGrasp in paper.tex (paper_long.tex stays CRAG); beta explained in abstract + intro

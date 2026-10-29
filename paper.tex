@@ -14,11 +14,11 @@
 % Convenience macro for TODO markers left in the manuscript during drafting.
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
 
-\title{CRAG: Classifier-Regularized Action Generation\\for Dexterous Climbing-Hold Grasps}
+\title{Grasp-Taxonomy Conditioning as a Mode Switch\\for Dexterous Grasping of Climbing Holds}
 \author{Anonymous Authors}
 
 \markboth{IEEE Robotics and Automation Letters. Preprint Version.}%
-{CRAG: Classifier-Regularized Action Generation}
+{Grasp-Taxonomy Conditioning as a Mode Switch}
 
 \begin{document}
 \maketitle
@@ -30,18 +30,26 @@ of holds, for thin edges a crimp is required, for slopers an open hand press is
 required, etc. Existing diffusion-policy approaches learn the singular action
 distribution per task, but don't model grasp taxonomy. This leaves the question of how
 taxonomy conditioning will impact the learned distribution. We introduce
-\textbf{CRAG}, a grasp-taxonomy-conditioned 3D diffusion policy that builds off a
+\textbf{BetaGrasp}, a grasp-taxonomy-conditioned 3D diffusion policy that builds off a
 DP3-style point-cloud policy on a four-class label (crimp, sloper, pinch, and jug) for
-a Franka arm with a 16-DoF LEAP hand end effector. This is done in conjunction with a
+a Franka arm with a 16-DoF LEAP hand end effector. In climbing, ``beta'' is the
+knowledge of how to do a move, which climbers often get from someone else rather than
+from looking at the hold. The grasp-type label plays the same role for our policy.
+This is done in conjunction with a
 climbing-hold manipulation benchmark on a spring-constrained displacement testbed with
-a linear ratchet that produces a slip-force readout in newtons. The trained models we
+a linear ratchet that produces a slip-force readout in newtons. With climbing holds this matters,
+because the point clouds of different holds look alike to the policy's encoder, so the
+scan alone can't tell it which grasp to use. The trained models we
 evaluated showed that the system without grasp-taxonomy does have classical
 mode collapse once it starts from the robot's reset pose: in closed-loop rollouts it
 ends in a jug grasp on every hold (25\% correct grasp type, versus 94\% with
-taxonomy). Hardware evaluation on 80 paired trials supports this
+taxonomy). In other words, the taxonomy label acts as a switch for which grasp the
+policy performs. Hardware
+evaluation on 80 paired trials supports this
 mechanistic prediction. Taxonomy conditioning improves median slip force by +5.2\,N
-(Wilcoxon signed-rank, $p < 0.001$, Cohen's $d = 0.95$), with effect sizes ordered by
-contact-tolerance tightness, from $d = 1.82$ on pinch to $d = 0.55$ on jug. The
+(Wilcoxon signed-rank, $p < 0.001$, Cohen's $d = 0.95$), with the smallest effect on
+the jug ($d = 0.55$), the grasp the system without taxonomy defaults to, and the
+largest on pinch ($d = 1.82$). The
 system's failure mode was grasps slipping on holds; this drops from 44\% of trials
 without grasp taxonomy to 10\% with grasp taxonomy.
 \end{abstract}
@@ -58,7 +66,7 @@ grasping.
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_architecture.png}
-\caption{CRAG architecture. Point cloud, proprioception, and grasp-type
+\caption{BetaGrasp architecture. Point cloud, proprioception, and grasp-type
 label are encoded independently and fused into a 512-d conditioning vector $z$
 that feature-wise conditions a 1D temporal U-Net diffusion denoiser. The
 without-taxonomy ablation drops only the grasp-type branch (orange)
@@ -84,7 +92,9 @@ learning \cite{chi2023diffusionpolicy,ho2020ddpm}. We built on top of DP3
 architecture (Fig.~\ref{fig:arch}). The problem arises for multi-grasp policies in how
 grasping distribution is mapped out. Most diffusion policies treat grasping as a single
 distribution conditioned on observations. These observations from point-clouds alone
-lack explicit conditioning on grasp taxonomy. Recent work on taxonomy-conditioned
+lack explicit conditioning on grasp taxonomy. This is especially a problem for climbing
+holds. Once the scene is cropped and downsampled to 1024 points, the policy's encoder
+can't tell the four holds apart, even though each one needs a different grasp. Recent work on taxonomy-conditioned
 grasping \cite{dexonomy2025,tian2024graspasyousay} does train on grasp type but only
 generates static poses on an end effector, rather than executable autonomy
 trajectories, leaving execution-policy open.
@@ -93,25 +103,30 @@ The natural hypothesis is that taxonomy conditioning helps as a \emph{mode selec
 Without taxonomy a policy trained on multi grasp datasets could collapse to one grasp
 type and fail when faced with a mixed test set. In our example, it could collapse to,
 say, a jug grasp every time and fail for the other 3 grasping tasks. Our analysis
-supports this theory. Started from the robot's reset pose, the non-taxonomy policy
+supports this theory. Started from the robot's reset pose, the without-taxonomy policy
 collapses to a jug grasp on every hold. It only separates grasp types when its starting
 hand pose already carries them, as in the first frame of a recorded demonstration. This
 prediction is testable on hardware: conditioning should help least on the jug, the
-grasp the non-taxonomy policy defaults to. The
-empirical per-type success pattern follows suit.
+grasp the without-taxonomy policy defaults to. The
+empirical per-type success pattern follows suit. Like a climber who has been given the
+beta, the policy with the taxonomy label knows which grasp to use before it reaches the
+hold; without it, the policy has to guess from a point cloud that doesn't distinguish
+the holds.
 
 \paragraph*{Contributions}
 \begin{enumerate}
-  \item A \textbf{grasp-taxonomy-aware 3D diffusion policy} (CRAG) that
+  \item A \textbf{grasp-taxonomy-aware 3D diffusion policy} (BetaGrasp) that
     conditions action diffusion on a grasp-type label alongside 3D point-cloud
     geometry and robot proprioception, built on DP3-style architectures
     \cite{ze2024dp3}.
-  \item A \textbf{climbing-hold manipulation benchmark} with a spring-constrained
-    displacement testbed and linear ratcheting mechanism, providing continuous
+  \item A \textbf{climbing-hold manipulation benchmark}, where the holds look alike to
+    the policy as point clouds but each need a different grasp, with a
+    spring-constrained displacement testbed and linear ratcheting mechanism, providing continuous
     grip-stability measurements across five hold orientations per grasp/hold type.
-  \item A \textbf{mechanistic characterisation} showing that taxonomy conditioning
+  \item A \textbf{mechanistic characterization} showing that taxonomy conditioning
     acts as a mode selector at deployment (without it, the policy collapses to a jug
-    grasp from the reset pose), with evidence from latent-space
+    grasp from the reset pose, because the point cloud alone does not identify the
+    grasp), with evidence from latent-space
     analysis, closed-loop rollouts, and per-type robot evaluation.
   \item A \textbf{paired evaluation protocol} with global model-order
     alternation and per-trial point-cloud capture, supporting Wilcoxon signed-rank
@@ -145,15 +160,15 @@ LEAP Hand v1, which provides the wider finger range of motion required for our
 four-class taxonomy. Functional pre-grasp manipulation has been studied via diffusion
 policy with teacher-student distillation \cite{wu2024unidexfpm}. CrossDex
 \cite{crossdex2025} addresses cross-embodiment generalization via eigengrasp
-representations---complementary to our work, which targets qualitatively distinct
-grasps on a fixed embodiment.
+representations. Our work is complementary, targeting qualitatively distinct grasps
+on a fixed embodiment.
 
 \subsection{Grasp Taxonomy and Type-Conditioned Grasping}
 Human grasp taxonomies organize grasps into discrete categories reflecting opposition
 type, thumb position, and power vs.\ precision \cite{feix2016grasp}.
 Most closely related, \textbf{Dexonomy} \cite{dexonomy2025} conditions on the full
 33-type GRASP taxonomy from single-view point clouds to synthesize dexterous grasp
-poses for a Shadow Hand (82.3\% real-world success). Critically, Dexonomy is a static
+poses for a Shadow Hand (82.3\% real-world success). Dexonomy is a static
 grasp-pose generator: it produces three snapshots (pre-grasp, grasp, squeeze) handed to
 a motion planner, with no imitation learning and no continuous trajectory execution.
 Language-conditioned grasp generation \cite{tian2024graspasyousay} similarly produces
@@ -162,10 +177,9 @@ feeding a downstream pose generator. DexGraspVLA \cite{dexgraspvla2026} combines
 planner with a diffusion execution policy, but the VLM selects \emph{which object} to
 grasp rather than \emph{how}; no per-type trajectory specialization is learned.
 
-To our knowledge, CRAG is the first system to condition a continuous
+To our knowledge, BetaGrasp is the first system to condition a continuous
 imitation-learning execution policy on grasp taxonomy for a multi-DoF arm--hand system,
-and the first to characterise mechanistically what that conditioning does to the
-learned distribution. Table~\ref{tab:novelty} summarises the positioning.
+and the first to show what that conditioning changes in the policy's behavior. Table~\ref{tab:novelty} summarizes the positioning.
 
 \begin{table}[t]
 \centering\small
@@ -183,7 +197,7 @@ Dexonomy \cite{dexonomy2025}                  & \checkmark & 31 types   & pose-g
 Grasp as You Say \cite{tian2024graspasyousay} & \checkmark & language   & pose-gen     & \checkmark \\
 OmniDexVLG \cite{omnidexvlg2024}              & partial    & VLM        & pose-gen     & \checkmark \\
 DexGraspVLA \cite{dexgraspvla2026}            & ---        & obj.\ ID   & \checkmark   & \checkmark \\
-\textbf{CRAG}                                 & \checkmark & 4-class    & arm+hand     & LEAP \\
+\textbf{BetaGrasp}                            & \checkmark & 4-class    & arm+hand     & LEAP \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -213,13 +227,13 @@ via supervised diffusion loss.
 \label{sec:arch}
 Our policy follows the DP3 design pattern \cite{ze2024dp3}: a point-cloud encoder
 produces a 3D scene embedding, fused with robot state and a grasp-type embedding to
-condition a 1D temporal U-Net that parameterises the diffusion denoiser
+condition a 1D temporal U-Net that parameterizes the diffusion denoiser
 (Fig.~\ref{fig:arch}).
 
 \paragraph*{Point cloud encoder}
 A PointNet-style encoder \cite{qi2017pointnet} (channels $3 \to 64 \to 128 \to 256$,
 no T-Net, max-pool, linear projection) maps $P \in \mathbb{R}^{1024 \times 3}$ to a
-256-dimensional feature vector $z_P$. We use XYZ-only points (no colour) to reduce
+256-dimensional feature vector $z_P$. We use XYZ-only points (no color) to reduce
 sensitivity to appearance and lighting \cite{ze2024dp3}.
 
 \paragraph*{State and grasp-type conditioning}
@@ -241,13 +255,13 @@ control \cite{song2021ddim}.
 \subsection{Training}
 \label{sec:training}
 Training follows standard DDPM supervision \cite{ho2020ddpm}: sample diffusion step
-$k$, add noise to the ground-truth action chunk $a_0$, and minimise the noise-prediction
+$k$, add noise to the ground-truth action chunk $a_0$, and minimize the noise-prediction
 loss conditioned on observations and (if applicable) grasp type. We use AdamW
 \cite{loshchilov2019adamw} with learning rate $10^{-4}$, $\beta=(0.95, 0.999)$, and
 weight decay $10^{-6}$; batch size 128; 3000 epochs with 500-step linear warmup and
 cosine decay; power-law EMA with max decay 0.9999; gradient clip 1.0; and PyTorch AMP
 mixed precision. Point clouds are augmented with Gaussian jitter ($\sigma = 0.002$\,m)
-and 5\% random point dropout. State and action are min--max normalised to $[-1, 1]$.
+and 5\% random point dropout. State and action are min--max normalized to $[-1, 1]$.
 We follow the DP3 convention of no held-out validation split on this size of imitation
 dataset, treating real-world rollout success as the validation signal. Both policies
 trained on a single NVIDIA RTX 2080 Ti, reaching final training losses of 0.00167
@@ -323,7 +337,7 @@ We use four physical climbing holds, one per grasp category (Fig.~\ref{fig:setup
 \emph{crimp} (thin edges, curled-fingertip contact), \emph{sloper} (smooth
 convex surface, open-hand friction), \emph{pinch} (narrow protrusion,
 thumb--finger opposition), and \emph{jug} (deep incut, power grasp). A fifth
-held-out crimp variant is reserved for cross-instance generalisation evaluation
+held-out crimp variant is reserved for cross-instance generalization evaluation
 (not used in the results below).
 
 \subsection{Dataset}
@@ -346,8 +360,8 @@ Both policies (with and without taxonomy conditioning) are evaluated in interlac
 pairs: each pair tests both models on the same physical hold position, with model
 order strictly alternating across pairs so each model runs first in exactly 50\% of
 pairs per grasp type. A fresh fused point cloud is captured before each individual
-trial (the trial-1 contact typically nudges the hold by a few millimetres; re-scanning
-before trial 2 keeps the comparison faithful). After each rollout the arm applies a
+trial (the trial-1 contact typically nudges the hold by a few millimeters; re-scanning
+before trial 2 keeps the comparison fair). After each rollout the arm applies a
 13\,cm Cartesian-impedance pull along the testbed's fixed axis with differential
 per-axis stiffness ($k_x = 4000$\,N/m on the pull axis, $k_y = 100$\,N/m laterally,
 $k_z = 2000$\,N/m vertically to support the LEAP hand's $\sim$1\,kg mass). The
@@ -359,17 +373,18 @@ pair begins.
 \label{sec:exp}
 % -----------------------------------------------------------------------
 Prior to the paired evaluation we stated two hypotheses: \textbf{H1}
-(primary)---the conditioned model achieves higher median slip force than the
-unconditioned model across all four grasp types; and \textbf{H2}
-(ordering)---effect sizes are largest on precision-critical grasp
+(primary): the conditioned model achieves higher median slip force than the
+without-taxonomy model across all four grasp types; and \textbf{H2}
+(ordering): effect sizes are largest on precision-critical grasp
 types (crimp, sloper, pinch) and smallest on the geometrically forgiving jug. The
-mechanistic analysis below motivates H2, and the hardware evaluation tests both.
+mechanistic analysis below gives a different reason for this ordering than the one we
+assumed when stating H2, and the hardware evaluation tests both.
 
 \subsection{Mechanistic Analysis}
 \label{sec:mechanistic}
 A standard hypothesis for why taxonomy conditioning helps is \emph{mode selection}:
 without the label, a policy trained on mixed grasp types might average across modes,
-collapsing to a single blurred behaviour. We test this directly using the trained
+collapsing to a single blurred behavior. We test this directly using the trained
 with-taxonomy and without-taxonomy policies on matched inputs ($K=8$ rollouts per
 input, 25 inputs per grasp type).\footnote{The latent and mean-action
 analyses reported here were computed on the pre-rig checkpoints (the precursor
@@ -396,18 +411,17 @@ frame of a recorded demonstration, where both policies are near 100\%.}
 We compute silhouette score and stratified 5-fold kNN accuracy on the fused encoder
 output for the without-taxonomy policy using held-out inputs spanning all four grasp
 types. Despite receiving no conditioning signal, the encoder reaches kNN accuracy
-99\% and silhouette 0.32, indicating that grasp-type structure is already present in
-the representation. The point-cloud branch alone does not separate the types
-(silhouette $-0.03$); the structure comes from the proprioception channel
-(supplementary material).
+99\% and silhouette 0.32. The point-cloud branch alone does not separate the types
+(silhouette $-0.03$, 5-NN accuracy 39\%, chance 25\%); all of this structure comes
+from the proprioception channel (supplementary material).
 
 \paragraph*{Mean action commitment}
 We compute the between-type spread of mean predicted final-step hand poses across all
 four grasp types. The without-taxonomy policy produces means that differ across
 types at 90\% of the demonstrator's between-type spread (0.316\,rad vs.\ 0.352\,rad
 for demonstrators; the with-taxonomy policy produces 0.314\,rad). From recorded
-demonstration frames, the unconditioned
-policy does not collapse to a single behaviour mode.
+demonstration frames, the without-taxonomy
+policy does not collapse to a single behavior mode.
 
 \paragraph*{Closed-loop rollouts from the reset pose}
 Both analyses above use the first frame of recorded demonstrations as input. At
@@ -423,15 +437,17 @@ misses landing on jug), while the without-taxonomy policy does so in only 25\%: 
 one of its 800 rollouts ends in a jug grasp, whatever the hold (Fig.~\ref{fig:mech}).
 
 \paragraph*{Interpretation: taxonomy as a mode selector}
-Together, these results support the mode-selector account at deployment. During data
+These results support the mode-selector account at deployment. During data
 collection the operator positions the arm and hand under VR teleoperation before
 recording begins, so the first recorded frame already holds a hand pre-shaped for its
 grasp type (0.8--3.0\,rad from the reset pose) \todo{author: confirm hand was
-pre-shaped at recording start}. The unconditional policy learns to read grasp type from
+pre-shaped at recording start}. The without-taxonomy policy learns to read grasp type from
 this hand pose, which is why its latent separation comes from proprioception rather
 than the point cloud. At deployment every trial starts from the same reset pose, that
-cue is gone, and the policy defaults to a single grasp. The taxonomy label supplies
-the missing information. The label is a switch, not a precision knob.
+cue is gone, and the point cloud cannot replace it because the encoder does not
+separate the holds, so the policy defaults to a single grasp. The taxonomy label fills
+in this missing information, acting as a switch that decides which grasp the policy
+performs.
 
 \subsection{Hardware Evaluation}
 \label{sec:robot_eval}
@@ -449,8 +465,8 @@ type with $n=20$ pairs each; effect sizes are Cohen's $d$ on paired differences.
 IQR with medians, thin lines join the two trials of each pair, and each type is
 annotated with its median gain, Cohen's $d$ on paired differences, and Wilcoxon
 signed-rank $p$ (two-sided). The without-taxonomy sloper box is degenerate (all 20
-trials at preload force $\approx 5.2$\,N)---a complete-failure mode the conditioning
-rescues. (b) Failure-mode breakdown (W = with taxonomy, W/o = without): each bar
+trials at preload force $\approx 5.2$\,N), a complete failure that conditioning
+partly rescues. (b) Failure-mode breakdown (W = with taxonomy, W/o = without): each bar
 stacks 20 trials into four force regimes. Conditioning converts 13 of the 20 complete
 sloper failures into weak grips (7 remain at preload), and pinch and jug show no
 complete failures with conditioning; crimp under
@@ -465,31 +481,28 @@ Taxonomy conditioning improves grip strength on every grasp type tested
 Cohen's $d = 0.95$).
 
 \paragraph*{H2: ordering across grasp types}
-The effect-size ordering matches the prediction from
-\S\ref{sec:mechanistic}. Pinch, the narrowest hold, shows the largest effect
-($d = 1.82$), with the conditioned model winning all 20 pairs. Sloper ($d = 1.08$)
-and crimp ($d = 1.05$) follow, both high-precision contact geometries. The jug,
-whose deep incut pocket accommodates sub-centimetre positioning error, gives the
-smallest effect ($d = 0.55$), and is the grasp the without-taxonomy policy defaults
-to. Pinch and crimp share the same $\Delta$ median but
+The effect-size ordering matches H2. Pinch, the narrowest hold, shows the largest
+effect ($d = 1.82$), with the conditioned model winning all 20 pairs. Sloper
+($d = 1.08$) and crimp ($d = 1.05$) follow. The jug gives the smallest effect
+($d = 0.55$); it is the grasp the without-taxonomy policy defaults to, so on the jug
+hold both policies usually perform the right grasp. Pinch and crimp share the same $\Delta$ median but
 pinch's larger $d$ reflects a tighter distribution of paired differences. Aggregating
 across types, the conditioned model wins 61 of 80 pairs, ties 14, and loses 5.
 
 \paragraph*{Failure-mode rescue}
 Bucketing each rollout into complete failure ($\le 5.3$\,N, preload only), weak grip
 ($5.3$--$13.5$\,N), moderate grip ($13.5$--$23.0$\,N), or strong grip ($> 23.0$\,N)
-exposes where the conditioning gain lives. The bin boundaries correspond to
+shows where the gain comes from. The bin boundaries correspond to
 0, 1--3, 4--7, and $\ge 8$ ratchet teeth, respectively. Complete failures fall from 44\% of
 trials without conditioning to 10\% with it (a $4.4\times$ reduction), and strong
 grips rise from 1\% to 9\%. Most of the improvement comes from converting failed
 trials into measurable grips, with smaller gains in the upper tail
-(Fig.~\ref{fig:hw}b). Taxonomy conditioning does not merely sharpen
-successful grips; it rescues failures.
+(Fig.~\ref{fig:hw}b).
 
 \paragraph*{Orientation profile}
 Per-orientation breakdown shows the expected geometric pattern: performance peaks
 near $0^\circ$ (pull-aligned) and degrades as the hold rotates toward $\pm 45^\circ$,
-where the moment arm between contact and pull axis maximises mechanical disadvantage
+where the moment arm between contact and pull axis maximizes mechanical disadvantage
 against the grip. Crimp shows the largest orientation sensitivity (18\,N spread
 between hardest and easiest orientation), consistent with the thin lateral profile of
 the crimp edge providing little angular tolerance (supplementary material).
@@ -498,7 +511,7 @@ the crimp edge providing little angular tolerance (supplementary material).
 Strict global order alternation made each model run first in exactly 40 of 80 pairs.
 A Mann--Whitney $U$ test between when-first and when-second rollouts found no
 detectable order bias for either model (with $p = 0.771$, without $p = 0.690$). The
-median between-trial PC centroid drift was sub-millimetre, well below the post-hoc
+median between-trial PC centroid drift was sub-millimeter, well below the post-hoc
 15\,mm drift filter threshold, and no pairs were dropped.
 
 % -----------------------------------------------------------------------
@@ -508,9 +521,15 @@ median between-trial PC centroid drift was sub-millimetre, well below the post-h
 
 \paragraph*{Failure-mode rescue as the dominant mechanism}
 The gain from conditioning is concentrated in the lower tail of the slip-force
-distribution. The mode-selector view supplies a simple explanation: without the label,
+distribution. This follows from the mode-selector result: without the label,
 the policy executes a jug grasp on crimp, sloper, and pinch holds, and a grasp shaped
 for the wrong hold slips under load.
+
+\paragraph*{Why climbing holds}
+Each climbing hold needs its own grasp, but the policy's point-cloud encoder can't tell
+the holds apart. Without the label, the policy has nothing reliable to pick the grasp
+from at deployment, and the taxonomy label gives it that. We expect the same to be true
+for other objects that look alike to a 3D encoder but need different hand shapes.
 
 \paragraph*{Benchmark design}
 The spring displacement testbed provides experimental control unavailable in standard
@@ -527,28 +546,33 @@ Cohen's $d$ values are platform-specific (Franka + LEAP only) until shown otherw
 The spring testbed measures grip force against displacement on one fixed axis, which
 captures the dominant load direction of dynamic crux moves but not multi-directional
 or sustained loads. Training did not pin a global random seed, and the planned
-wrong-label ablation---feeding the conditioned policy a deliberately mismatched label
-to test causality---is not yet run. All 80 paired trials come from one $\sim$7-hour
-session with one rater, so inter-session variance is uncharacterised. Hold orientation
+wrong-label ablation, where the conditioned policy is given a deliberately wrong label
+to test causality, has not been run yet. The closed-loop rollouts in
+\S\ref{sec:mechanistic} are simulated (commanded joints tracked exactly, no contact),
+and the grasp each policy executed was not logged on hardware. We also cannot yet
+separate two explanations for the point-cloud result: the holds' point clouds may be
+too similar after cropping and downsampling, or the policy may have relied on the
+hand-pose cue during training instead of learning from the scan. All 80 paired trials come from one $\sim$7-hour
+session with one rater, so inter-session variance is uncharacterized. Hold orientation
 is not stored in the training zarr; the policy infers it from the point cloud. Finally,
-median slip force with conditioning is 13.1\,N---moderate, not strong---leaving obvious
-headroom for per-grasp specialisation, data scaling, or contact-aware auxiliary losses.
+median slip force with conditioning is 13.1\,N, which is a moderate grip, so there is
+still room to improve with per-grasp specialization or more data.
 
 % -----------------------------------------------------------------------
 \section{Conclusion}
 % -----------------------------------------------------------------------
-We presented CRAG, a grasp-taxonomy-aware 3D diffusion policy for dexterous
+We presented BetaGrasp, a grasp-taxonomy-aware 3D diffusion policy for dexterous
 climbing hold manipulation, together with a climbing-hold benchmark on a
 spring-constrained displacement testbed instrumented with a linear ratchet that
-yields a continuous slip-force readout. The central finding is mechanistic:
-taxonomy conditioning in a dexterous diffusion policy functions as a
-\textbf{mode selector}. The unconditioned policy separates grasp types only when its
-starting hand pose already encodes them; from the deployment reset pose it collapses to
+yields a continuous slip-force readout. Our main finding is that taxonomy conditioning
+acts as a \textbf{mode selector}, or switch, for which grasp the policy performs. The without-taxonomy policy separates grasp types only when its
+starting hand pose already encodes them, since its point-cloud encoder does not tell
+the holds apart; from the deployment reset pose it collapses to
 a single jug grasp, while the conditioned policy selects the correct grasp in 94\% of
 rollouts. Hardware evaluation on 80 paired trials supports this
-account: median slip force rises by 5.2\,N with conditioning, effect sizes are ordered
-by contact-tolerance tightness, and the complete-failure rate falls from 44\% of trials
-to 10\%.
+account: median slip force rises by 5.2\,N with conditioning, the smallest effect is
+on the jug, the grasp the without-taxonomy policy defaults to, and the complete-failure
+rate falls from 44\% of trials to 10\%.
 
 \paragraph*{Reproducibility}
 The two checkpoints (with and without taxonomy) are a matched ablation pair, identical
